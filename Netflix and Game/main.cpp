@@ -43,7 +43,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 	shellData.hWnd = msgWindow;
 	shellData.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP;
 	shellData.uCallbackMessage = shellCallback;
-	shellData.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_ICON));
+	shellData.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_ICON1));
 	strcpy_s(shellData.szTip, "Netflix and Game");
 
 	MENUITEMINFO quitItem = {};
