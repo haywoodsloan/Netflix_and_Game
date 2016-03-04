@@ -1,5 +1,6 @@
-#include <iostream>
 #include <Windows.h>
+#include <Audiopolicy.h>
+#include <Mmdeviceapi.h>
 #include <string>
 #include "resource.h"
 
@@ -12,7 +13,7 @@ HWND msgWindow;
 NOTIFYICONDATA shellData;
 
 LRESULT CALLBACK msgClassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-	
+
 	if (uMsg == shellCallback && lParam == WM_RBUTTONUP) {
 		POINT p;
 		GetCursorPos(&p);
@@ -28,39 +29,108 @@ LRESULT CALLBACK msgClassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 	return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
 
+void muteForegroundWindow() {
+	
+	IMMDevice *mmDevice;
+	IMMDeviceEnumerator *mmDeviceEnum;
+	IAudioSessionManager2 *sessionManager;
+	IAudioSessionEnumerator *sessionEnum;
+	IAudioSessionControl *sessionControl;
+	IAudioSessionControl2 *sessionControl2;
+	ISimpleAudioVolume *audioVolume;
+	
+	CoCreateInstance(__uuidof(MMDeviceEnumerator), 0, CLSCTX_ALL, __uuidof(IMMDeviceEnumerator), (void**)&mmDeviceEnum);
+	mmDeviceEnum->GetDefaultAudioEndpoint(eRender, eMultimedia, &mmDevice);
+	mmDevice->Activate(__uuidof(IAudioSessionManager2), CLSCTX_ALL, 0, (void**)&sessionManager);
+	sessionManager->GetSessionEnumerator(&sessionEnum);
+
+	int sessionCount;
+	sessionEnum->GetCount(&sessionCount);
+
+	for (int i = 0; i < sessionCount; i++) {
+		sessionEnum->GetSession(i, &sessionControl);
+		sessionControl->QueryInterface(__uuidof(IAudioSessionControl2), (void**)&sessionControl2);
+
+		DWORD pid;
+		sessionControl2->GetProcessId(&pid);
+		if (GetProcessId(GetForegroundWindow()) == pid) {
+			
+			sessionControl->QueryInterface(__uuidof(ISimpleAudioVolume), (void**)&audioVolume);
+			
+			BOOL muted;
+			audioVolume->GetMute(&muted);
+			audioVolume->SetMute(!muted,0);
+
+			audioVolume->Release();
+		}
+		
+		sessionControl->Release();
+		sessionControl2->Release();
+	}
+
+	sessionEnum->Release();
+	sessionManager->Release();
+	mmDevice->Release();
+	mmDeviceEnum->Release();
+}
 
 BOOL WINAPI EnumWindowProc(HWND hwnd, LPARAM lParam) {
-	
+
 	char titleBuff[128];
 	GetWindowText(hwnd, titleBuff, 128);
 
+	bool foundWindow = 0;
 	if (strstr(titleBuff, "YouTube") > 0) {
 		SendMessage(hwnd, WM_ACTIVATE, WA_ACTIVE, 0);
 		SendMessage(hwnd, WM_KEYDOWN, 'K', 0);
 		SendMessage(hwnd, WM_KEYUP, 'K', 0);
 		SendMessage(hwnd, WM_ACTIVATE, WA_INACTIVE, 0);
-		
+		muteForegroundWindow();
+
 		return 0;
 	}
 
 	return 1;
 }
 
+bool isActiveWindowFullscreen() {
+
+	HWND activeHwnd = GetForegroundWindow();
+	if (activeHwnd == GetShellWindow()) return 0;
+
+	HMONITOR activeMonitor = MonitorFromWindow(activeHwnd, MONITOR_DEFAULTTONEAREST);
+
+	MONITORINFO activeMonitorInfo;
+	activeMonitorInfo.cbSize = sizeof(MONITORINFO);
+	GetMonitorInfo(activeMonitor, &activeMonitorInfo);
+
+	RECT activeHwndRect;
+	GetWindowRect(activeHwnd, &activeHwndRect);
+
+	return (activeHwndRect.top <= activeMonitorInfo.rcMonitor.top + 1 &&
+		activeHwndRect.bottom >= activeMonitorInfo.rcMonitor.bottom - 1 &&
+		activeHwndRect.left <= activeMonitorInfo.rcMonitor.left + 1 &&
+		activeHwndRect.right >= activeMonitorInfo.rcMonitor.right - 1);
+}
+
 LRESULT CALLBACK keyHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
-	
+
 	if (wParam == WM_KEYUP) {
-		
+
 		KBDLLHOOKSTRUCT *kbHookStruct = (KBDLLHOOKSTRUCT*)lParam;
 		if (kbHookStruct->vkCode == VK_MEDIA_PLAY_PAUSE) {
-			EnumWindows(EnumWindowProc, 0);
+			if (isActiveWindowFullscreen()) {
+				EnumWindows(EnumWindowProc, 0);
+			}
 		}
-
 	}
-	
+
 	return CallNextHookEx(0, nCode, wParam, lParam);
 }
 
 int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
+	
+	CoInitialize(0);
 
 	WNDCLASSEX msgClass = {};
 	msgClass.cbSize = sizeof(WNDCLASSEX);
