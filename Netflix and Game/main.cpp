@@ -44,17 +44,20 @@ void muteForegroundWindow() {
 	mmDevice->Activate(__uuidof(IAudioSessionManager2), CLSCTX_ALL, 0, (void**)&sessionManager);
 	sessionManager->GetSessionEnumerator(&sessionEnum);
 
+	DWORD fpid;
+	GetWindowThreadProcessId(GetForegroundWindow(), &fpid);
+
 	int sessionCount;
 	sessionEnum->GetCount(&sessionCount);
-
 	for (int i = 0; i < sessionCount; i++) {
 		sessionEnum->GetSession(i, &sessionControl);
 		sessionControl->QueryInterface(__uuidof(IAudioSessionControl2), (void**)&sessionControl2);
 
 		DWORD pid;
 		sessionControl2->GetProcessId(&pid);
-		if (GetProcessId(GetForegroundWindow()) == pid) {
-
+		
+		if (fpid == pid) {
+			
 			sessionControl->QueryInterface(__uuidof(ISimpleAudioVolume), (void**)&audioVolume);
 
 			BOOL muted;
@@ -80,11 +83,11 @@ BOOL WINAPI EnumWindowProc(HWND hwnd, LPARAM lParam) {
 	GetWindowText(hwnd, titleBuff, 128);
 
 	if (strstr(titleBuff, "YouTube") > 0) {
+		muteForegroundWindow();
 		SendMessage(hwnd, WM_ACTIVATE, WA_ACTIVE, 0);
 		SendMessage(hwnd, WM_KEYDOWN, 'K', 0);
 		SendMessage(hwnd, WM_KEYUP, 'K', 0);
 		SendMessage(hwnd, WM_ACTIVATE, WA_INACTIVE, 0);
-		muteForegroundWindow();
 
 		return 0;
 	}
