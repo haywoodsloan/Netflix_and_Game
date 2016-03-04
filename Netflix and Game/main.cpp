@@ -30,7 +30,7 @@ LRESULT CALLBACK msgClassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 }
 
 void muteForegroundWindow() {
-	
+
 	IMMDevice *mmDevice;
 	IMMDeviceEnumerator *mmDeviceEnum;
 	IAudioSessionManager2 *sessionManager;
@@ -38,7 +38,7 @@ void muteForegroundWindow() {
 	IAudioSessionControl *sessionControl;
 	IAudioSessionControl2 *sessionControl2;
 	ISimpleAudioVolume *audioVolume;
-	
+
 	CoCreateInstance(__uuidof(MMDeviceEnumerator), 0, CLSCTX_ALL, __uuidof(IMMDeviceEnumerator), (void**)&mmDeviceEnum);
 	mmDeviceEnum->GetDefaultAudioEndpoint(eRender, eMultimedia, &mmDevice);
 	mmDevice->Activate(__uuidof(IAudioSessionManager2), CLSCTX_ALL, 0, (void**)&sessionManager);
@@ -54,16 +54,16 @@ void muteForegroundWindow() {
 		DWORD pid;
 		sessionControl2->GetProcessId(&pid);
 		if (GetProcessId(GetForegroundWindow()) == pid) {
-			
+
 			sessionControl->QueryInterface(__uuidof(ISimpleAudioVolume), (void**)&audioVolume);
-			
+
 			BOOL muted;
 			audioVolume->GetMute(&muted);
-			audioVolume->SetMute(!muted,0);
+			audioVolume->SetMute(!muted, 0);
 
 			audioVolume->Release();
 		}
-		
+
 		sessionControl->Release();
 		sessionControl2->Release();
 	}
@@ -79,7 +79,6 @@ BOOL WINAPI EnumWindowProc(HWND hwnd, LPARAM lParam) {
 	char titleBuff[128];
 	GetWindowText(hwnd, titleBuff, 128);
 
-	bool foundWindow = 0;
 	if (strstr(titleBuff, "YouTube") > 0) {
 		SendMessage(hwnd, WM_ACTIVATE, WA_ACTIVE, 0);
 		SendMessage(hwnd, WM_KEYDOWN, 'K', 0);
@@ -129,7 +128,7 @@ LRESULT CALLBACK keyHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
 }
 
 int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
-	
+
 	CoInitialize(0);
 
 	WNDCLASSEX msgClass = {};
