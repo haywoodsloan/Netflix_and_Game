@@ -50,6 +50,7 @@ void muteForegroundWindow() {
 	int sessionCount;
 	sessionEnum->GetCount(&sessionCount);
 	for (int i = 0; i < sessionCount; i++) {
+		
 		sessionEnum->GetSession(i, &sessionControl);
 		sessionControl->QueryInterface(__uuidof(IAudioSessionControl2), (void**)&sessionControl2);
 
