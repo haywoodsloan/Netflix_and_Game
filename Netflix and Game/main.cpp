@@ -44,8 +44,8 @@ void muteForegroundWindow() {
 	mmDevice->Activate(__uuidof(IAudioSessionManager2), CLSCTX_ALL, 0, (void**)&sessionManager);
 	sessionManager->GetSessionEnumerator(&sessionEnum);
 
-	DWORD fpid;
-	GetWindowThreadProcessId(GetForegroundWindow(), &fpid);
+	DWORD activePid;
+	GetWindowThreadProcessId(GetForegroundWindow(), &activePid);
 
 	int sessionCount;
 	sessionEnum->GetCount(&sessionCount);
@@ -53,11 +53,10 @@ void muteForegroundWindow() {
 		
 		sessionEnum->GetSession(i, &sessionControl);
 		sessionControl->QueryInterface(__uuidof(IAudioSessionControl2), (void**)&sessionControl2);
-
+		
 		DWORD pid;
 		sessionControl2->GetProcessId(&pid);
-		
-		if (fpid == pid) {
+		if (activePid == pid) {
 			
 			sessionControl->QueryInterface(__uuidof(ISimpleAudioVolume), (void**)&audioVolume);
 
@@ -88,6 +87,24 @@ BOOL WINAPI EnumWindowProc(HWND hwnd, LPARAM lParam) {
 		SendMessage(hwnd, WM_ACTIVATE, WA_ACTIVE, 0);
 		SendMessage(hwnd, WM_KEYDOWN, 'K', 0);
 		SendMessage(hwnd, WM_KEYUP, 'K', 0);
+		SendMessage(hwnd, WM_ACTIVATE, WA_INACTIVE, 0);
+
+		return 0;
+	}
+	else if (strstr(titleBuff, "Hulu") > 0) {
+		muteForegroundWindow();
+		SendMessage(hwnd, WM_ACTIVATE, WA_ACTIVE, 0);
+		SendMessage(hwnd, WM_KEYDOWN, VK_SPACE, 0);
+		SendMessage(hwnd, WM_KEYUP, VK_SPACE, 0);
+		SendMessage(hwnd, WM_ACTIVATE, WA_INACTIVE, 0);
+
+		return 0;
+	}
+	else if (strstr(titleBuff, "Netflix") > 0) {
+		muteForegroundWindow();
+		SendMessage(hwnd, WM_ACTIVATE, WA_ACTIVE, 0);
+		SendMessage(hwnd, WM_KEYDOWN, VK_SPACE, 0);
+		SendMessage(hwnd, WM_KEYUP, VK_SPACE, 0);
 		SendMessage(hwnd, WM_ACTIVATE, WA_INACTIVE, 0);
 
 		return 0;
