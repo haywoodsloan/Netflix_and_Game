@@ -5,12 +5,19 @@
 #include "resource.h"
 
 #define shellCallback 530
-#define quitItemID 889
 #define msgClassName "msgClass"
 
 HMENU popupMenu;
 HWND msgWindow;
 NOTIFYICONDATA shellData;
+
+UINT soundOption = muteItemID;
+
+struct mediaCommand {
+	char *title;
+	UINT button;
+};
+const mediaCommand mediaCommands[] = { {"YouTube",'K'}, {"Netflix", VK_SPACE}, {"Hulu", VK_SPACE} };
 
 LRESULT CALLBACK msgClassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 
@@ -21,9 +28,39 @@ LRESULT CALLBACK msgClassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 		BringWindowToTop(msgWindow);
 		TrackPopupMenu(popupMenu, 0, p.x, p.y, 0, msgWindow, 0);
 	}
-	else if (uMsg == WM_COMMAND && LOWORD(wParam) == quitItemID) {
-		Shell_NotifyIcon(NIM_DELETE, &shellData);
-		exit(0);
+	else if (uMsg == WM_COMMAND) {
+		if (LOWORD(wParam) == quitItemID) {
+			Shell_NotifyIcon(NIM_DELETE, &shellData);
+			exit(0);
+		}
+		else {
+			soundOption = LOWORD(wParam);
+
+			MENUITEMINFO checkInfo = {};
+			checkInfo.cbSize = sizeof(MENUITEMINFO);
+			checkInfo.fMask = MIIM_STATE;
+
+			char menuString[64];
+			MENUITEMINFO stringInfo = {};
+			stringInfo.cbSize = sizeof(MENUITEMINFO);
+			stringInfo.fMask = MIIM_STRING;
+			stringInfo.dwTypeData = menuString;
+			stringInfo.cch = 64;
+
+			HMENU soundOptions = GetSubMenu(popupMenu,0);
+			UINT count = GetMenuItemCount(soundOptions);
+
+			for (UINT i = 0; i < count; i++) {
+				if (GetMenuItemID(soundOptions, i) == soundOption) {
+					checkInfo.fState = MFS_CHECKED;
+					SetMenuItemInfo(popupMenu, GetMenuItemID(soundOptions, i), 0, &checkInfo);
+				}
+				else {
+					checkInfo.fState = MFS_UNCHECKED;
+					SetMenuItemInfo(popupMenu, GetMenuItemID(soundOptions, i), 0, &checkInfo);
+				}
+			}
+		}
 	}
 
 	return DefWindowProc(hwnd, uMsg, wParam, lParam);
@@ -50,20 +87,30 @@ void muteForegroundWindow() {
 	int sessionCount;
 	sessionEnum->GetCount(&sessionCount);
 	for (int i = 0; i < sessionCount; i++) {
-		
+
 		sessionEnum->GetSession(i, &sessionControl);
 		sessionControl->QueryInterface(__uuidof(IAudioSessionControl2), (void**)&sessionControl2);
-		
+
 		DWORD pid;
 		sessionControl2->GetProcessId(&pid);
 		if (activePid == pid) {
-			
+
 			sessionControl->QueryInterface(__uuidof(ISimpleAudioVolume), (void**)&audioVolume);
 
-			BOOL muted;
-			audioVolume->GetMute(&muted);
-			audioVolume->SetMute(!muted, 0);
+			if (soundOption == muteItemID) {
+				BOOL muted;
 
+				audioVolume->GetMute(&muted);
+				audioVolume->SetMute(!muted, 0);
+			}
+			else {
+				float volumeLevel;
+				float newVolumeLevel = (soundOption - 40000) / 100.0f;
+
+				audioVolume->GetMasterVolume(&volumeLevel);
+				audioVolume->SetMasterVolume(volumeLevel == 1.0f ? newVolumeLevel : 1.0f, 0);
+			}
+			
 			audioVolume->Release();
 		}
 
@@ -82,32 +129,17 @@ BOOL WINAPI EnumWindowProc(HWND hwnd, LPARAM lParam) {
 	char titleBuff[128];
 	GetWindowText(hwnd, titleBuff, 128);
 
-	if (strstr(titleBuff, "YouTube") > 0) {
-		muteForegroundWindow();
-		SendMessage(hwnd, WM_ACTIVATE, WA_ACTIVE, 0);
-		SendMessage(hwnd, WM_KEYDOWN, 'K', 0);
-		SendMessage(hwnd, WM_KEYUP, 'K', 0);
-		SendMessage(hwnd, WM_ACTIVATE, WA_INACTIVE, 0);
+	UINT count = sizeof(mediaCommands) / sizeof(mediaCommands[0]);
+	for (UINT i = 0; i < count; i++) {
+		if (strstr(titleBuff, mediaCommands[i].title) > 0) {
+			muteForegroundWindow();
+			SendMessage(hwnd, WM_ACTIVATE, WA_ACTIVE, 0);
+			SendMessage(hwnd, WM_KEYDOWN, mediaCommands[i].button, 0);
+			SendMessage(hwnd, WM_KEYUP, mediaCommands[i].button, 0);
+			SendMessage(hwnd, WM_ACTIVATE, WA_INACTIVE, 0);
 
-		return 0;
-	}
-	else if (strstr(titleBuff, "Hulu") > 0) {
-		muteForegroundWindow();
-		SendMessage(hwnd, WM_ACTIVATE, WA_ACTIVE, 0);
-		SendMessage(hwnd, WM_KEYDOWN, VK_SPACE, 0);
-		SendMessage(hwnd, WM_KEYUP, VK_SPACE, 0);
-		SendMessage(hwnd, WM_ACTIVATE, WA_INACTIVE, 0);
-
-		return 0;
-	}
-	else if (strstr(titleBuff, "Netflix") > 0) {
-		muteForegroundWindow();
-		SendMessage(hwnd, WM_ACTIVATE, WA_ACTIVE, 0);
-		SendMessage(hwnd, WM_KEYDOWN, VK_SPACE, 0);
-		SendMessage(hwnd, WM_KEYUP, VK_SPACE, 0);
-		SendMessage(hwnd, WM_ACTIVATE, WA_INACTIVE, 0);
-
-		return 0;
+			return 0;
+		}
 	}
 
 	return 1;
@@ -160,17 +192,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 
 	RegisterClassEx(&msgClass);
 	msgWindow = CreateWindowEx(0, msgClassName, "Netflix and Game", 0, 0, 0, 0, 0, HWND_MESSAGE, 0, 0, 0);
-
-	MENUITEMINFO quitItem = {};
-	quitItem.cbSize = sizeof(MENUITEMINFO);
-	quitItem.fMask = MIIM_FTYPE | MIIM_ID | MIIM_STRING;
-	quitItem.fType = MFT_STRING;
-	quitItem.wID = quitItemID;
-	quitItem.dwTypeData = "Quit";
-	quitItem.cch = 5;
-
-	popupMenu = CreatePopupMenu();
-	InsertMenuItem(popupMenu, 0, 1, &quitItem);
+	popupMenu = GetSubMenu(LoadMenu(hInstance, MAKEINTRESOURCE(IDR_MENU1)), 0);
 
 	shellData = {};
 	shellData.cbSize = sizeof(NOTIFYICONDATA);
@@ -181,7 +203,6 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 	strcpy_s(shellData.szTip, "Netflix and Game");
 
 	Shell_NotifyIcon(NIM_ADD, &shellData);
-
 	SetWindowsHookEx(WH_KEYBOARD_LL, keyHookProc, 0, 0);
 
 	MSG msg;
