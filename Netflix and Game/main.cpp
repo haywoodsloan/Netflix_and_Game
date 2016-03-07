@@ -11,7 +11,7 @@ HMENU popupMenu;
 HWND msgWindow;
 NOTIFYICONDATA shellData;
 
-UINT soundOption = muteItemID;
+UINT soundOption = s25ItemID;
 
 struct mediaCommand {
 	char *title;
