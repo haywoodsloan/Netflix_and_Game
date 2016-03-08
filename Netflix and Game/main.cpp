@@ -220,4 +220,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
 	}
+
+	Shell_NotifyIcon(NIM_DELETE, &shellData);
+	UnhookWindowsHookEx(keyHook);
 }
