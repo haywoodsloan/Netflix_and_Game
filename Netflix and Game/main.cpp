@@ -1,7 +1,6 @@
 #include <Windows.h>
 #include <Audiopolicy.h>
 #include <Mmdeviceapi.h>
-#include <string>
 #include "resource.h"
 
 #define shellCallback 530
@@ -9,9 +8,11 @@
 
 HMENU popupMenu;
 HWND msgWindow;
+HHOOK keyHook;
 NOTIFYICONDATA shellData;
 
 UINT soundOption = s25ItemID;
+BOOL reqFullscreen = 1;
 
 struct mediaCommand {
 	char *title;
@@ -22,6 +23,7 @@ const mediaCommand mediaCommands[] = { {"YouTube",'K'}, {"Netflix", VK_SPACE}, {
 LRESULT CALLBACK msgClassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 
 	if (uMsg == shellCallback && lParam == WM_RBUTTONUP) {
+
 		POINT p;
 		GetCursorPos(&p);
 
@@ -29,9 +31,23 @@ LRESULT CALLBACK msgClassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 		TrackPopupMenu(popupMenu, 0, p.x, p.y, 0, msgWindow, 0);
 	}
 	else if (uMsg == WM_COMMAND) {
+		
 		if (LOWORD(wParam) == quitItemID) {
 			Shell_NotifyIcon(NIM_DELETE, &shellData);
+			UnhookWindowsHookEx(keyHook);
 			exit(0);
+		}
+		else if (LOWORD(wParam) == reqFSItemID) {
+			reqFullscreen = !reqFullscreen;
+			
+			MENUITEMINFO checkInfo = {};
+			checkInfo.cbSize = sizeof(MENUITEMINFO);
+			checkInfo.fMask = MIIM_STATE;
+
+			GetMenuItemInfo(popupMenu, reqFSItemID, 0, &checkInfo);
+			checkInfo.fState ^= MFS_CHECKED;
+			checkInfo.fState ^= MFS_UNCHECKED;
+			SetMenuItemInfo(popupMenu, reqFSItemID, 0, &checkInfo);
 		}
 		else {
 			soundOption = LOWORD(wParam);
@@ -40,17 +56,11 @@ LRESULT CALLBACK msgClassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 			checkInfo.cbSize = sizeof(MENUITEMINFO);
 			checkInfo.fMask = MIIM_STATE;
 
-			char menuString[64];
-			MENUITEMINFO stringInfo = {};
-			stringInfo.cbSize = sizeof(MENUITEMINFO);
-			stringInfo.fMask = MIIM_STRING;
-			stringInfo.dwTypeData = menuString;
-			stringInfo.cch = 64;
-
-			HMENU soundOptions = GetSubMenu(popupMenu,0);
+			HMENU soundOptions = GetSubMenu(popupMenu, 0);
 			UINT count = GetMenuItemCount(soundOptions);
 
 			for (UINT i = 0; i < count; i++) {
+
 				if (GetMenuItemID(soundOptions, i) == soundOption) {
 					checkInfo.fState = MFS_CHECKED;
 					SetMenuItemInfo(popupMenu, GetMenuItemID(soundOptions, i), 0, &checkInfo);
@@ -110,7 +120,7 @@ void muteForegroundWindow() {
 				audioVolume->GetMasterVolume(&volumeLevel);
 				audioVolume->SetMasterVolume(volumeLevel == 1.0f ? newVolumeLevel : 1.0f, 0);
 			}
-			
+
 			audioVolume->Release();
 		}
 
@@ -171,7 +181,7 @@ LRESULT CALLBACK keyHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
 
 		KBDLLHOOKSTRUCT *kbHookStruct = (KBDLLHOOKSTRUCT*)lParam;
 		if (kbHookStruct->vkCode == VK_MEDIA_PLAY_PAUSE) {
-			if (isActiveWindowFullscreen()) {
+			if (!reqFullscreen || isActiveWindowFullscreen()) {
 				EnumWindows(EnumWindowProc, 0);
 			}
 		}
@@ -203,7 +213,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 	strcpy_s(shellData.szTip, "Netflix and Game");
 
 	Shell_NotifyIcon(NIM_ADD, &shellData);
-	SetWindowsHookEx(WH_KEYBOARD_LL, keyHookProc, 0, 0);
+	keyHook = SetWindowsHookEx(WH_KEYBOARD_LL, keyHookProc, 0, 0);
 
 	MSG msg;
 	while (GetMessage(&msg, NULL, 0, 0) > 0) {
