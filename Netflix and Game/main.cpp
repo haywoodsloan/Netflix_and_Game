@@ -27,7 +27,7 @@ LRESULT CALLBACK msgClassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 		POINT p;
 		GetCursorPos(&p);
 
-		BringWindowToTop(msgWindow);
+		SetForegroundWindow(msgWindow);
 		TrackPopupMenu(popupMenu, 0, p.x, p.y, 0, msgWindow, 0);
 		PostMessage(msgWindow, WM_NULL, 0, 0);
 	}
@@ -197,12 +197,12 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 
 	WNDCLASSEX msgClass = {};
 	msgClass.cbSize = sizeof(WNDCLASSEX);
-	msgClass.style = CS_NOCLOSE;
 	msgClass.lpfnWndProc = msgClassProc;
+	msgClass.hInstance = hInstance;
 	msgClass.lpszClassName = msgClassName;
 
 	RegisterClassEx(&msgClass);
-	msgWindow = CreateWindowEx(0, msgClassName, "Netflix and Game", 0, 0, 0, 0, 0, HWND_MESSAGE, 0, 0, 0);
+	msgWindow = CreateWindowEx(0, msgClassName, "Netflix and Game", 0, 0, 0, 0, 0, HWND_MESSAGE, 0, hInstance, 0);
 	popupMenu = GetSubMenu(LoadMenu(hInstance, MAKEINTRESOURCE(IDR_MENU1)), 0);
 
 	shellData = {};
