@@ -29,9 +29,10 @@ LRESULT CALLBACK msgClassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 
 		BringWindowToTop(msgWindow);
 		TrackPopupMenu(popupMenu, 0, p.x, p.y, 0, msgWindow, 0);
+		PostMessage(msgWindow, WM_NULL, 0, 0);
 	}
 	else if (uMsg == WM_COMMAND) {
-		
+
 		if (LOWORD(wParam) == quitItemID) {
 			Shell_NotifyIcon(NIM_DELETE, &shellData);
 			UnhookWindowsHookEx(keyHook);
@@ -39,7 +40,7 @@ LRESULT CALLBACK msgClassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 		}
 		else if (LOWORD(wParam) == reqFSItemID) {
 			reqFullscreen = !reqFullscreen;
-			
+
 			MENUITEMINFO checkInfo = {};
 			checkInfo.cbSize = sizeof(MENUITEMINFO);
 			checkInfo.fMask = MIIM_STATE;
