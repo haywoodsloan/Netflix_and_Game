@@ -18,7 +18,7 @@ struct mediaCommand {
 	char *title;
 	UINT button;
 };
-const mediaCommand mediaCommands[] = { {"YouTube",'K'}, {"Netflix", VK_SPACE}, {"Hulu", VK_SPACE} , {"Spotify", 0} };
+const mediaCommand mediaCommands[] = { {"YouTube",'K'}, {"Netflix", VK_SPACE}, {"Hulu", VK_SPACE} , {"Spotify", 0}, {"Skype", 0} };
 
 LRESULT CALLBACK msgClassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 
