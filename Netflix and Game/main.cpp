@@ -143,16 +143,14 @@ BOOL WINAPI EnumWindowProc(HWND hwnd, LPARAM lParam) {
 	UINT count = sizeof(mediaCommands) / sizeof(mediaCommands[0]);
 	for (UINT i = 0; i < count; i++) {
 		if (strstr(titleBuff, mediaCommands[i].title) > 0) {
-			
-			muteForegroundWindow();		
-			HWND foregroundHWND = GetForegroundWindow();
-
-			SendMessage(hwnd, WM_ACTIVATE, WA_ACTIVE, 0);
-			SendMessage(hwnd, WM_KILLFOCUS, WPARAM(foregroundHWND), 0);
+				
+			SendMessage(hwnd, WM_ACTIVATE, WA_CLICKACTIVE, 0);
 			SendMessage(hwnd, WM_KEYDOWN, mediaCommands[i].button, 0);
+			SendMessage(hwnd, WM_CHAR, mediaCommands[i].button, 0);
 			SendMessage(hwnd, WM_KEYUP, mediaCommands[i].button, 0);
-			SendMessage(hwnd, WM_ACTIVATE, WA_INACTIVE, LPARAM(foregroundHWND));
-			
+			SendMessage(hwnd, WM_ACTIVATE, WA_INACTIVE, 0);
+
+			muteForegroundWindow();
 
 			return 0;
 		}
