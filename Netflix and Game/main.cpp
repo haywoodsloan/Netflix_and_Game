@@ -2,6 +2,7 @@
 #include <Audiopolicy.h>
 #include <Mmdeviceapi.h>
 #include "resource.h"
+#include <string>
 
 #define shellCallback 530
 #define msgClassName "msgClass"
@@ -144,18 +145,14 @@ BOOL WINAPI EnumWindowProc(HWND hwnd, LPARAM lParam) {
 	for (UINT i = 0; i < count; i++) {
 		if (strstr(titleBuff, mediaCommands[i].title) > 0) {
 			
-			HWND foregroundHWND = GetForegroundWindow();
-			muteForegroundWindow();
+			if (soundOption != dncItemID) muteForegroundWindow();
 
-			SendMessage(hwnd, WM_ACTIVATE, WA_CLICKACTIVE, 0);
-			SendMessage(hwnd, WM_KEYDOWN, mediaCommands[i].button, 0);
-			SendMessage(hwnd, WM_CHAR, mediaCommands[i].button, 0);
-			SendMessage(hwnd, WM_KEYUP, mediaCommands[i].button, 0);
-			SendMessage(hwnd, WM_ACTIVATE, WA_INACTIVE, 0);
-
-			SetActiveWindow(foregroundHWND);
-			SetFocus(foregroundHWND);
-
+			PostMessage(hwnd, WM_ACTIVATE, WA_INACTIVE, 0);
+			PostMessage(hwnd, WM_ACTIVATE, WA_ACTIVE, 0);
+			PostMessage(hwnd, WM_KEYDOWN, mediaCommands[i].button, 0);
+			PostMessage(hwnd, WM_KEYUP, mediaCommands[i].button, 0);
+			PostMessage(hwnd, WM_ACTIVATE, WA_INACTIVE, 0);
+			
 			return 0;
 		}
 	}
