@@ -2,7 +2,6 @@
 #include <Audiopolicy.h>
 #include <Mmdeviceapi.h>
 #include "resource.h"
-#include <string>
 
 #define shellCallback 530
 #define msgClassName "msgClass"
