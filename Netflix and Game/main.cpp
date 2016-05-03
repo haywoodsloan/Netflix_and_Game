@@ -12,7 +12,7 @@ HHOOK keyHook;
 NOTIFYICONDATA shellData;
 
 UINT soundOption = s25ItemID;
-BOOL reqFullscreen = 1;
+bool reqFullscreen = true;
 
 struct mediaCommand {
 	char *title;
@@ -145,12 +145,16 @@ BOOL WINAPI EnumWindowProc(HWND hwnd, LPARAM lParam) {
 		if (strstr(titleBuff, mediaCommands[i].title) > 0) {
 			
 			if (soundOption != dncItemID) muteForegroundWindow();
+			
+			LONG windowStyles = GetWindowLong(hwnd, GWL_EXSTYLE);
+			LONG windowStyleNoActive = windowStyles | WS_EX_NOACTIVATE;
 
-			PostMessage(hwnd, WM_ACTIVATE, WA_INACTIVE, 0);
-			PostMessage(hwnd, WM_ACTIVATE, WA_ACTIVE, 0);
-			PostMessage(hwnd, WM_KEYDOWN, mediaCommands[i].button, 0);
-			PostMessage(hwnd, WM_KEYUP, mediaCommands[i].button, 0);
-			PostMessage(hwnd, WM_ACTIVATE, WA_INACTIVE, 0);
+			SetWindowLong(hwnd, GWL_EXSTYLE, windowStyleNoActive);
+			SendMessage(hwnd, WM_ACTIVATE, WA_ACTIVE, 0);
+			SendMessage(hwnd, WM_KEYDOWN, mediaCommands[i].button, 0);
+			SendMessage(hwnd, WM_KEYUP, mediaCommands[i].button, 0);
+			SendMessage(hwnd, WM_ACTIVATE, WA_INACTIVE, 0);
+			SetWindowLong(hwnd, GWL_EXSTYLE, windowStyles);
 			
 			return 0;
 		}
@@ -188,6 +192,11 @@ LRESULT CALLBACK keyHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
 			if (!reqFullscreen || isActiveWindowFullscreen()) {
 				EnumWindows(EnumWindowProc, 0);
 			}
+		}
+	}else if (wParam == WM_SYSKEYUP) {
+		KBDLLHOOKSTRUCT *kbHookStruct = (KBDLLHOOKSTRUCT*)lParam;
+		if (kbHookStruct->vkCode == 'M') {
+			muteForegroundWindow();
 		}
 	}
 
