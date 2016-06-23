@@ -196,8 +196,8 @@ LRESULT CALLBACK keyHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
 	}
 	else if (wParam == WM_SYSKEYUP) {
 		KBDLLHOOKSTRUCT *kbHookStruct = (KBDLLHOOKSTRUCT*)lParam;
-		if (kbHookStruct->vkCode == 'M') {
-			if (!reqFullscreen || isActiveWindowFullscreen()) {
+		if (kbHookStruct->vkCode == VK_F6) {
+			if (!reqFullscreen || isActiveWindowFullscreen() && soundOption != dncItemID) {
 				muteForegroundWindow();
 			}
 		}
