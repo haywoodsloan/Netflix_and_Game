@@ -185,7 +185,7 @@ bool isActiveWindowFullscreen() {
 
 LRESULT CALLBACK keyHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
 
-	if (wParam == WM_KEYUP) {
+	if (wParam == WM_KEYDOWN) {
 
 		KBDLLHOOKSTRUCT *kbHookStruct = (KBDLLHOOKSTRUCT*)lParam;
 		if (kbHookStruct->vkCode == VK_MEDIA_PLAY_PAUSE) {
@@ -194,7 +194,7 @@ LRESULT CALLBACK keyHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
 			}
 		}
 	}
-	else if (wParam == WM_SYSKEYUP) {
+	else if (wParam == WM_SYSKEYDOWN) {
 		KBDLLHOOKSTRUCT *kbHookStruct = (KBDLLHOOKSTRUCT*)lParam;
 		if (kbHookStruct->vkCode == VK_F6) {
 			if (!reqFullscreen || isActiveWindowFullscreen() && soundOption != dncItemID) {
