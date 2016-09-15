@@ -79,6 +79,15 @@ LRESULT CALLBACK msgClassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 
 void muteForegroundWindow() {
 
+	char titleBuff[128];
+	HWND activeHWND = GetForegroundWindow();
+	GetWindowText(activeHWND, titleBuff, 128);
+
+	UINT count = sizeof(mediaCommands) / sizeof(mediaCommands[0]);
+	for (UINT i = 0; i < count; i++) {
+		if (strstr(titleBuff, mediaCommands[i].title) > 0) return;
+	}
+
 	IMMDevice *mmDevice;
 	IMMDeviceEnumerator *mmDeviceEnum;
 	IAudioSessionManager2 *sessionManager;
@@ -93,7 +102,7 @@ void muteForegroundWindow() {
 	sessionManager->GetSessionEnumerator(&sessionEnum);
 
 	DWORD activePid;
-	GetWindowThreadProcessId(GetForegroundWindow(), &activePid);
+	GetWindowThreadProcessId(activeHWND, &activePid);
 
 	int sessionCount;
 	sessionEnum->GetCount(&sessionCount);
