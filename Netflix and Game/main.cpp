@@ -13,6 +13,7 @@ NOTIFYICONDATA shellData;
 
 UINT soundOption = s25ItemID;
 bool reqFullscreen = true;
+bool hasChangedVolume = false;
 
 struct mediaCommand {
 	char *title;
@@ -77,7 +78,7 @@ LRESULT CALLBACK msgClassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 	return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
 
-void muteForegroundWindow() {
+void changeFGWindowVolume() {
 
 	char titleBuff[128];
 	HWND activeHWND = GetForegroundWindow();
@@ -153,7 +154,10 @@ BOOL WINAPI EnumWindowProc(HWND hwnd, LPARAM lParam) {
 	for (UINT i = 0; i < count; i++) {
 		if (strstr(titleBuff, mediaCommands[i].title) > 0) {
 
-			if (soundOption != dncItemID) muteForegroundWindow();
+			if (soundOption != dncItemID && !hasChangedVolume) {
+				changeFGWindowVolume();
+				hasChangedVolume = true;
+			}
 
 			LONG windowStyles = GetWindowLong(hwnd, GWL_EXSTYLE);
 			LONG windowStyleNoActive = windowStyles | WS_EX_NOACTIVATE;
@@ -165,7 +169,7 @@ BOOL WINAPI EnumWindowProc(HWND hwnd, LPARAM lParam) {
 			SendMessage(hwnd, WM_ACTIVATE, WA_INACTIVE, 0);
 			SetWindowLong(hwnd, GWL_EXSTYLE, windowStyles);
 
-			return 0;
+			return 1;
 		}
 	}
 
@@ -200,6 +204,7 @@ LRESULT CALLBACK keyHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
 		if (kbHookStruct->vkCode == VK_MEDIA_PLAY_PAUSE) {
 			if (!reqFullscreen || isActiveWindowFullscreen()) {
 				EnumWindows(EnumWindowProc, 0);
+				hasChangedVolume = false;
 			}
 		}
 	}
@@ -207,7 +212,7 @@ LRESULT CALLBACK keyHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
 		KBDLLHOOKSTRUCT *kbHookStruct = (KBDLLHOOKSTRUCT*)lParam;
 		if (kbHookStruct->vkCode == VK_F6) {
 			if (!reqFullscreen || isActiveWindowFullscreen() && soundOption != dncItemID) {
-				muteForegroundWindow();
+				changeFGWindowVolume();
 			}
 		}
 	}
