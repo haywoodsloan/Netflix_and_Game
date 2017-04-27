@@ -5,6 +5,7 @@
 
 #define shellCallback 530
 #define msgClassName "msgClass"
+#define msgWindowName "Netflix and Game"
 
 HMENU popupMenu;
 HWND msgWindow;
@@ -213,7 +214,6 @@ LRESULT CALLBACK keyHookProc(int nCode, WPARAM wParam, LPARAM lParam)
 {
 	if (wParam == WM_KEYDOWN)
 	{
-
 		KBDLLHOOKSTRUCT *kbHookStruct = (KBDLLHOOKSTRUCT*)lParam;
 		if (kbHookStruct->vkCode == VK_MEDIA_PLAY_PAUSE)
 		{
@@ -241,6 +241,8 @@ LRESULT CALLBACK keyHookProc(int nCode, WPARAM wParam, LPARAM lParam)
 
 int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
+	if (FindWindow(msgClassName, NULL)) return 1;
+
 	CoInitialize(NULL);
 
 	WNDCLASSEX msgClass = {};
@@ -250,7 +252,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 	msgClass.lpszClassName = msgClassName;
 
 	RegisterClassEx(&msgClass);
-	msgWindow = CreateWindowEx(0, msgClassName, "Netflix and Game", NULL, 0, 0, 0, 0, HWND_MESSAGE, NULL, hInstance, NULL);
+	msgWindow = CreateWindowEx(0, msgClassName, msgWindowName, NULL, 0, 0, 0, 0, HWND_MESSAGE, NULL, hInstance, NULL);
 	popupMenu = GetSubMenu(LoadMenu(hInstance, MAKEINTRESOURCE(IDR_MENU1)), 0);
 
 	shellData = {};
@@ -273,4 +275,6 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 
 	Shell_NotifyIcon(NIM_DELETE, &shellData);
 	UnhookWindowsHookEx(keyHook);
+
+	return 0;
 }
