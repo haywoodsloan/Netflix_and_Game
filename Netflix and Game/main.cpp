@@ -128,20 +128,30 @@ void changeFGWindowVolume()
 		{
 			sessionControl->QueryInterface(__uuidof(ISimpleAudioVolume), (void**)&audioVolume);
 
+			BOOL muted;
+			audioVolume->GetMute(&muted);
+
+			float volumeLevel;
+			audioVolume->GetMasterVolume(&volumeLevel);
+
 			if (soundOption == muteItemID)
 			{
-				BOOL muted;
-
-				audioVolume->GetMute(&muted);
 				audioVolume->SetMute(!muted, 0);
+
+				if (volumeLevel != 1.0f)
+				{
+					audioVolume->SetMasterVolume(1.0f, 0);
+				}
 			}
 			else
 			{
-				float volumeLevel;
 				float newVolumeLevel = (soundOption - 40000) / 100.0f;
-
-				audioVolume->GetMasterVolume(&volumeLevel);
 				audioVolume->SetMasterVolume(volumeLevel == 1.0f ? newVolumeLevel : 1.0f, 0);
+
+				if (muted)
+				{
+					audioVolume->SetMute(false, 0);
+				}
 			}
 
 			audioVolume->Release();
