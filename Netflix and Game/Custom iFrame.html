@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+	<head>
+	  <title>Select Media</title>
+        <script>
+
+            var siteDict = {
+                plex: ["Plex iFrame", "http://127.0.0.1:32400"],
+                cw: ["CW iFrame", "http://www.cwtv.com/"]
+            };
+
+            function buttonSelect() 
+            {
+                var select = document.getElementById('selection');
+                var selection = select.options[select.selectedIndex].value;
+
+                var frame = document.getElementById('showFrame');
+                frame.src = siteDict[selection][1];
+                document.title = siteDict[selection][0];
+                frame.style.visibility = "visible";
+
+                var selector = document.getElementsByClassName('selector');
+                for (var i = 0, len = selector.length; i < len; i++)
+                {
+                    selector[i].style.visibility = "hidden";
+                }
+            }
+
+        </script>
+	</head>
+
+	<body>
+        <div style="vertical-align:middle;">         
+            <select id="selection" class="selector" style="height:auto; width:auto;
+                margin-right:3px; margin-top:auto; margin-bottom:auto;">
+                    <option value="plex">Plex</option>
+                    <option value="cw">CW</option>
+            </select>
+
+            <button class="selector" style="height:auto; width:auto; margin:auto;" onclick="buttonSelect()">Go!</button>
+        </div>
+
+		<iframe id="showFrame" src="about:blank"
+			allowfullscreen="allowfullscreen"
+			mozallowfullscreen="mozallowfullscreen" 
+			msallowfullscreen="msallowfullscreen" 
+			oallowfullscreen="oallowfullscreen" 
+            webkitallowfullscreen="webkitallowfullscreen"
+			style="position:fixed; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%; 
+                border:none; margin:0; padding:0; overflow:hidden; z-index:999999; visibility:hidden;" >
+				    Your browser doesn't support iframes
+		</iframe>
+	</body>
+</html>
