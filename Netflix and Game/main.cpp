@@ -23,7 +23,7 @@ struct mediaCommand
 };
 
 const mediaCommand mediaCommands[] = { {"YouTube",'K'}, {"Netflix", VK_SPACE}, {"Hulu", VK_SPACE},
-	{"Spotify", 0}, {"Skype", 0}, {"VLC media player", VK_SPACE}, {"Plex", VK_SPACE} };
+	{"Spotify", 0}, {"Skype", 0}, {"VLC media player", VK_SPACE}, {"iFrame", VK_MEDIA_PLAY_PAUSE} };
 
 LRESULT CALLBACK msgClassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
