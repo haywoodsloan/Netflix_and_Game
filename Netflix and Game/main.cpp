@@ -22,8 +22,9 @@ struct mediaCommand
 	UINT button;
 };
 
-const mediaCommand mediaCommands[] = { {"YouTube",'K'}, {"Netflix", VK_SPACE}, {"Hulu", VK_SPACE},
-	{"Spotify", 0}, {"Skype", 0}, {"VLC media player", VK_SPACE}, {"Plex", VK_SPACE}, {"CW iFrame", VK_SPACE} };
+const mediaCommand mediaCommands[] = {{"YouTube",'K'}, {"Netflix", VK_SPACE}, {"Hulu", VK_SPACE},
+									  {"Spotify", NULL}, {"Skype", NULL}, {"VLC media player", VK_SPACE}, 
+									  {"Plex", VK_SPACE}, {"CW iFrame", VK_SPACE}, {"Amazon.com", VK_SPACE}};
 
 LRESULT CALLBACK msgClassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
