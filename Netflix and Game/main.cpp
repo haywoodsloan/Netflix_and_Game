@@ -12,13 +12,12 @@ HWND msgWindow;
 HHOOK keyHook;
 NOTIFYICONDATA shellData;
 
-UINT soundOption = s25ItemID;
+UINT soundOption = s10ItemID;
 bool reqFullscreen = true;
-bool hasChangedVolume = false;
 
 struct mediaCommand
 {
-	char *title;
+	char* title;
 	UINT button;
 };
 
@@ -146,7 +145,7 @@ void changeFGWindowVolume()
 			}
 			else
 			{
-				float newVolumeLevel = (soundOption - 40000) / 100.0f;
+				float newVolumeLevel = (soundOption - sBaseItemID) / 100.0f;
 				audioVolume->SetMasterVolume(volumeLevel == 1.0f ? newVolumeLevel : 1.0f, 0);
 
 				if (muted)
@@ -178,6 +177,7 @@ BOOL WINAPI EnumWindowProc(HWND hwnd, LPARAM lParam)
 	{
 		if (strstr(titleBuff, mediaCommands[i].title) > 0)
 		{
+			bool& hasChangedVolume = *((bool*)lParam);
 			if (soundOption != dncItemID && !hasChangedVolume)
 			{
 				changeFGWindowVolume();
@@ -230,8 +230,8 @@ LRESULT CALLBACK keyHookProc(int nCode, WPARAM wParam, LPARAM lParam)
 		{
 			if (!reqFullscreen || isActiveWindowFullscreen())
 			{
-				EnumWindows(EnumWindowProc, 0);
-				hasChangedVolume = false;
+				bool hasChangedVolume = false;
+				EnumWindows(EnumWindowProc, (LPARAM)&hasChangedVolume);
 			}
 		}
 	}
