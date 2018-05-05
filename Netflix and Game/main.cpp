@@ -12,6 +12,7 @@ HWND msgWindow;
 HHOOK keyHook;
 NOTIFYICONDATA shellData;
 
+UINT taskbarCreateMsg;
 UINT soundOption = s10ItemID;
 bool reqFullscreen = true;
 
@@ -40,9 +41,7 @@ LRESULT CALLBACK msgClassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 	{
 		if (LOWORD(wParam) == quitItemID)
 		{
-			Shell_NotifyIcon(NIM_DELETE, &shellData);
-			UnhookWindowsHookEx(keyHook);
-			exit(0);
+			PostMessage(hwnd, WM_CLOSE, 0, 0);
 		}
 		else if (LOWORD(wParam) == reqFSItemID)
 		{
@@ -82,6 +81,18 @@ LRESULT CALLBACK msgClassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 				}
 			}
 		}
+	}
+	else if (uMsg == taskbarCreateMsg)
+	{
+		Shell_NotifyIcon(NIM_ADD, &shellData);
+	}
+	else if (uMsg == WM_CREATE)
+	{
+		taskbarCreateMsg = RegisterWindowMessage(TEXT("TaskbarCreated"));
+	}
+	else if (uMsg == WM_DESTROY)
+	{
+		PostQuitMessage(0);
 	}
 
 	return DefWindowProc(hwnd, uMsg, wParam, lParam);
@@ -263,7 +274,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 	msgClass.lpszClassName = msgClassName;
 
 	RegisterClassEx(&msgClass);
-	msgWindow = CreateWindowEx(0, msgClassName, msgWindowName, NULL, 0, 0, 0, 0, HWND_MESSAGE, NULL, hInstance, NULL);
+	msgWindow = CreateWindowEx(0, msgClassName, msgWindowName, NULL, 0, 0, 0, 0, NULL, NULL, hInstance, NULL);
 	popupMenu = GetSubMenu(LoadMenu(hInstance, MAKEINTRESOURCE(IDR_MENU1)), 0);
 
 	shellData = {};
