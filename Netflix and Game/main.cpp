@@ -108,43 +108,6 @@ void changeFGWindowVolume()
 	mmDeviceEnum->Release();
 }
 
-BOOL WINAPI pausePlayMediaEnumProc(HWND hwnd, LPARAM lParam)
-{
-	char titleBuff[128];
-	GetWindowText(hwnd, titleBuff, 128);
-
-	UINT count = sizeof(mediaCommands) / sizeof(mediaCommands[0]);
-	for (UINT i = 0; i < count; i++)
-	{
-		if (strstr(titleBuff, mediaCommands[i].title) > 0)
-		{
-			bool* hasChangedVolume = (bool*)lParam;
-			*hasChangedVolume = true;
-
-			LONG windowStyles = GetWindowLong(hwnd, GWL_EXSTYLE);
-			LONG windowStyleNoActive = windowStyles | WS_EX_NOACTIVATE;
-
-			SetWindowLong(hwnd, GWL_EXSTYLE, windowStyleNoActive);
-			SendMessage(hwnd, WM_ACTIVATE, WA_ACTIVE, 0);
-			SendMessage(hwnd, WM_KEYDOWN, mediaCommands[i].button, 0);
-			SendMessage(hwnd, WM_KEYUP, mediaCommands[i].button, 0);
-			SendMessage(hwnd, WM_ACTIVATE, WA_INACTIVE, 0);
-			SetWindowLong(hwnd, GWL_EXSTYLE, windowStyles);
-
-			return 1;
-		}
-	}
-
-	return 1;
-}
-
-bool pausePlayMedia()
-{
-	bool hasChangedVolume = false;
-	EnumWindows(pausePlayMediaEnumProc, (LPARAM)&hasChangedVolume);
-	return hasChangedVolume;
-}
-
 bool isActiveWindowFullscreen()
 {
 	HWND activeHwnd = GetForegroundWindow();
@@ -165,6 +128,45 @@ bool isActiveWindowFullscreen()
 		activeHwndRect.right >= activeMonitorInfo.rcMonitor.right - 1);
 }
 
+BOOL WINAPI pausePlayMediaEnumProc(HWND hwnd, LPARAM lParam)
+{
+	int length = GetWindowTextLength(hwnd) + 1;
+	char* titleBuff = new char[length];
+	GetWindowText(hwnd, titleBuff, length);
+
+	UINT count = sizeof(mediaCommands) / sizeof(mediaCommands[0]);
+	for (UINT i = 0; i < count; i++)
+	{
+		if (strstr(titleBuff, mediaCommands[i].title) > 0)
+		{
+			bool* hasChangedVolume = (bool*)lParam;
+			*hasChangedVolume = true;
+
+			LONG windowStyles = GetWindowLong(hwnd, GWL_EXSTYLE);
+			LONG windowStyleNoActive = windowStyles | WS_EX_NOACTIVATE;
+
+			SetWindowLong(hwnd, GWL_EXSTYLE, windowStyleNoActive);
+			SendMessage(hwnd, WM_ACTIVATE, WA_ACTIVE, 0);
+			SendMessage(hwnd, WM_KEYDOWN, mediaCommands[i].button, 0);
+			SendMessage(hwnd, WM_KEYUP, mediaCommands[i].button, 0);
+			SendMessage(hwnd, WM_ACTIVATE, WA_INACTIVE, 0);
+			SetWindowLong(hwnd, GWL_EXSTYLE, windowStyles);
+
+			break;
+		}
+	}
+
+	delete[] titleBuff;
+	return 1;
+}
+
+bool pausePlayMedia()
+{
+	bool hasChangedVolume = false;
+	EnumWindows(pausePlayMediaEnumProc, (LPARAM)&hasChangedVolume);
+	return hasChangedVolume;
+}
+
 LRESULT CALLBACK msgClassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	if (uMsg == WM_HOTKEY)
@@ -178,12 +180,12 @@ LRESULT CALLBACK msgClassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 		{
 			changeFGWindowVolume();
 		}
-		else if (key == VK_F6 && (mods & MOD_ALT) &&
+		else if (key == VK_MEDIA_PREV_TRACK &&
 			(!reqFullscreen || isActiveWindowFullscreen()))
 		{
 			changeFGWindowVolume();
 		}
-		else if (key == VK_F6 && (mods & MOD_CONTROL))
+		else if (key == VK_MEDIA_NEXT_TRACK)
 		{
 			pausePlayMedia();
 		}
@@ -284,8 +286,8 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 
 	Shell_NotifyIcon(NIM_ADD, &shellData);
 	RegisterHotKey(msgWindow, 0, MOD_NOREPEAT, VK_MEDIA_PLAY_PAUSE);
-	RegisterHotKey(msgWindow, 1, MOD_NOREPEAT | MOD_ALT, VK_F6);
-	RegisterHotKey(msgWindow, 2, MOD_NOREPEAT | MOD_CONTROL, VK_F6);
+	RegisterHotKey(msgWindow, 1, MOD_NOREPEAT, VK_MEDIA_PREV_TRACK);
+	RegisterHotKey(msgWindow, 2, MOD_NOREPEAT, VK_MEDIA_NEXT_TRACK);
 
 	MSG msg;
 	while (GetMessage(&msg, NULL, 0, 0) > 0)
