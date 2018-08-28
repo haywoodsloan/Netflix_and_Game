@@ -1,11 +1,15 @@
 #include <Windows.h>
 #include <Audiopolicy.h>
 #include <Mmdeviceapi.h>
+#include <ShlObj.h>
+#include <stdio.h>
 #include "resource.h"
 
 #define shellCallback 530
 #define msgClassName "msgClass"
 #define msgWindowName "Netflix and Game"
+#define reqFSOptionName L"ReqFS"
+#define soundOptionName L"SoundOption"
 
 HMENU popupMenu;
 HWND msgWindow;
@@ -13,7 +17,7 @@ HHOOK keyHook;
 NOTIFYICONDATA shellData;
 
 UINT taskbarCreateMsg;
-UINT soundOption = s10ItemID;
+UINT soundOption = s25ItemID;
 bool reqFullscreen = true;
 
 struct mediaCommand
@@ -167,6 +171,64 @@ bool pausePlayMedia()
 	return hasChangedVolume;
 }
 
+void updateSoundOption()
+{
+	MENUITEMINFO checkInfo = {};
+	checkInfo.cbSize = sizeof(MENUITEMINFO);
+	checkInfo.fMask = MIIM_STATE;
+
+	HMENU soundOptions = GetSubMenu(popupMenu, 0);
+	UINT count = GetMenuItemCount(soundOptions);
+
+	for (UINT i = 0; i < count; i++)
+	{
+		if (GetMenuItemID(soundOptions, i) == soundOption)
+		{
+			checkInfo.fState = MFS_CHECKED;
+			SetMenuItemInfo(popupMenu, GetMenuItemID(soundOptions, i), 0, &checkInfo);
+		}
+		else
+		{
+			checkInfo.fState = MFS_UNCHECKED;
+			SetMenuItemInfo(popupMenu, GetMenuItemID(soundOptions, i), 0, &checkInfo);
+		}
+	}
+}
+
+void updateRequireFullScreen()
+{
+	MENUITEMINFO checkInfo = {};
+	checkInfo.cbSize = sizeof(MENUITEMINFO);
+	checkInfo.fMask = MIIM_STATE;
+
+	GetMenuItemInfo(popupMenu, reqFSItemID, 0, &checkInfo);
+	checkInfo.fState = reqFullscreen ? MFS_CHECKED : MFS_UNCHECKED;
+	SetMenuItemInfo(popupMenu, reqFSItemID, 0, &checkInfo);
+}
+
+void saveOptions()
+{
+	PWSTR folderPath;
+	SHGetKnownFolderPath(FOLDERID_LocalAppData, 0, NULL, &folderPath);
+
+	WCHAR optionsFilePath[1024];
+	swprintf_s(optionsFilePath, L"%s\\%s", folderPath, L"Netflix and Game");
+	CoTaskMemFree(folderPath);
+
+	CreateDirectoryW(optionsFilePath, NULL);
+	swprintf_s(optionsFilePath, L"%s\\%s", optionsFilePath, L"options.csv");
+
+	FILE* optionsFile;
+	_wfopen_s(&optionsFile, optionsFilePath, L"w");
+
+	if (optionsFile)
+	{
+		fwprintf_s(optionsFile, L"%s,%hhu\n", reqFSOptionName, reqFullscreen);
+		fwprintf_s(optionsFile, L"%s,%i\n", soundOptionName, soundOption);
+		fclose(optionsFile);
+	}
+}
+
 LRESULT CALLBACK msgClassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	if (uMsg == WM_HOTKEY)
@@ -208,41 +270,15 @@ LRESULT CALLBACK msgClassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 		else if (LOWORD(wParam) == reqFSItemID)
 		{
 			reqFullscreen = !reqFullscreen;
-
-			MENUITEMINFO checkInfo = {};
-			checkInfo.cbSize = sizeof(MENUITEMINFO);
-			checkInfo.fMask = MIIM_STATE;
-
-			GetMenuItemInfo(popupMenu, reqFSItemID, 0, &checkInfo);
-			checkInfo.fState ^= MFS_CHECKED;
-			checkInfo.fState ^= MFS_UNCHECKED;
-			SetMenuItemInfo(popupMenu, reqFSItemID, 0, &checkInfo);
+			updateRequireFullScreen();
 		}
 		else
 		{
 			soundOption = LOWORD(wParam);
-
-			MENUITEMINFO checkInfo = {};
-			checkInfo.cbSize = sizeof(MENUITEMINFO);
-			checkInfo.fMask = MIIM_STATE;
-
-			HMENU soundOptions = GetSubMenu(popupMenu, 0);
-			UINT count = GetMenuItemCount(soundOptions);
-
-			for (UINT i = 0; i < count; i++)
-			{
-				if (GetMenuItemID(soundOptions, i) == soundOption)
-				{
-					checkInfo.fState = MFS_CHECKED;
-					SetMenuItemInfo(popupMenu, GetMenuItemID(soundOptions, i), 0, &checkInfo);
-				}
-				else
-				{
-					checkInfo.fState = MFS_UNCHECKED;
-					SetMenuItemInfo(popupMenu, GetMenuItemID(soundOptions, i), 0, &checkInfo);
-				}
-			}
+			updateSoundOption();
 		}
+
+		saveOptions();
 	}
 	else if (uMsg == taskbarCreateMsg)
 	{
@@ -260,6 +296,42 @@ LRESULT CALLBACK msgClassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 	return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
 
+void loadOptions()
+{
+	PWSTR folderPath;
+	SHGetKnownFolderPath(FOLDERID_LocalAppData, 0, NULL, &folderPath);
+
+	WCHAR optionsFilePath[1024];
+	swprintf_s(optionsFilePath, L"%s\\%s", folderPath, L"Netflix and Game\\options.csv");
+	CoTaskMemFree(folderPath);
+
+	FILE* optionsFile;
+	_wfopen_s(&optionsFile, optionsFilePath, L"r");
+
+	if (optionsFile)
+	{
+		WCHAR option[256], value[256];
+		while (fwscanf_s(optionsFile, L"%[^,],%[^,\r\n]\n", option, 256, value, 256) == 2)
+		{
+			if (wcsncmp(option, reqFSOptionName, 256) == 0)
+			{
+				unsigned char fullscreen;
+				swscanf_s(value, L"%hhu", &fullscreen);
+				reqFullscreen = fullscreen;
+			}
+			else if (wcsncmp(option, soundOptionName, 256) == 0)
+			{
+				swscanf_s(value, L"%i", &soundOption);
+			}
+		}
+
+		fclose(optionsFile);
+	}
+
+	updateRequireFullScreen();
+	updateSoundOption();
+}
+
 int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
 	if (FindWindow(msgClassName, NULL)) return 1;
@@ -275,6 +347,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 	RegisterClassEx(&msgClass);
 	msgWindow = CreateWindowEx(0, msgClassName, msgWindowName, NULL, 0, 0, 0, 0, NULL, NULL, hInstance, NULL);
 	popupMenu = GetSubMenu(LoadMenu(hInstance, MAKEINTRESOURCE(IDR_MENU1)), 0);
+	loadOptions();
 
 	shellData = {};
 	shellData.cbSize = sizeof(NOTIFYICONDATA);
