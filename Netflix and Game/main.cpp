@@ -206,7 +206,7 @@ void updateRequireFullScreen()
 	SetMenuItemInfo(popupMenu, reqFSItemID, 0, &checkInfo);
 }
 
-void saveOptions()
+FILE* getOptionsFile(const wchar_t* mode)
 {
 	PWSTR folderPath;
 	SHGetKnownFolderPath(FOLDERID_LocalAppData, 0, NULL, &folderPath);
@@ -219,7 +219,14 @@ void saveOptions()
 	swprintf_s(optionsFilePath, L"%s\\%s", optionsFilePath, L"options.csv");
 
 	FILE* optionsFile;
-	_wfopen_s(&optionsFile, optionsFilePath, L"w");
+	_wfopen_s(&optionsFile, optionsFilePath, mode);
+
+	return optionsFile;
+}
+
+void saveOptions()
+{
+	FILE* optionsFile = getOptionsFile(L"w");
 
 	if (optionsFile)
 	{
@@ -298,20 +305,12 @@ LRESULT CALLBACK msgClassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 
 void loadOptions()
 {
-	PWSTR folderPath;
-	SHGetKnownFolderPath(FOLDERID_LocalAppData, 0, NULL, &folderPath);
-
-	WCHAR optionsFilePath[1024];
-	swprintf_s(optionsFilePath, L"%s\\%s", folderPath, L"Netflix and Game\\options.csv");
-	CoTaskMemFree(folderPath);
-
-	FILE* optionsFile;
-	_wfopen_s(&optionsFile, optionsFilePath, L"r");
+	FILE* optionsFile = getOptionsFile(L"r");
 
 	if (optionsFile)
 	{
 		WCHAR option[256], value[256];
-		while (fwscanf_s(optionsFile, L"%[^,],%[^,\r\n]\n", option, 256, value, 256) == 2)
+		while (fwscanf_s(optionsFile, L"%[^,],%[^\r\n] ", option, 256, value, 256) == 2)
 		{
 			if (wcsncmp(option, reqFSOptionName, 256) == 0)
 			{
