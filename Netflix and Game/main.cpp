@@ -167,7 +167,11 @@ BOOL WINAPI pausePlayMediaEnumProc(HWND hwnd, LPARAM lParam)
 bool pausePlayMedia()
 {
 	bool hasChangedVolume = false;
+	HWND activeHwnd = GetForegroundWindow();
+
 	EnumWindows(pausePlayMediaEnumProc, (LPARAM)&hasChangedVolume);
+	SetForegroundWindow(activeHwnd);
+
 	return hasChangedVolume;
 }
 
