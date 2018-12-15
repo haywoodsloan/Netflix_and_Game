@@ -151,10 +151,14 @@ BOOL WINAPI pausePlayMediaEnumProc(HWND hwnd, LPARAM lParam)
 
 			SetWindowLong(hwnd, GWL_EXSTYLE, windowStyleNoActive);
 			SendMessage(hwnd, WM_ACTIVATE, WA_ACTIVE, 0);
+			SendMessage(hwnd, WM_ACTIVATEAPP, WA_ACTIVE, 0);
+
 			SendMessage(hwnd, WM_KEYDOWN, mediaCommands[i].button, 0);
 			SendMessage(hwnd, WM_KEYUP, mediaCommands[i].button, 0);
-			SendMessage(hwnd, WM_ACTIVATE, WA_INACTIVE, 0);
+
 			SetWindowLong(hwnd, GWL_EXSTYLE, windowStyles);
+			SendMessage(hwnd, WM_ACTIVATE, WA_INACTIVE, 0);
+			SendMessage(hwnd, WM_ACTIVATEAPP, WA_INACTIVE, 0);
 
 			break;
 		}
