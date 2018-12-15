@@ -1,6 +1,7 @@
 #include <Windows.h>
 #include <Audiopolicy.h>
 #include <Mmdeviceapi.h>
+#include <time.h>
 #include <ShlObj.h>
 #include <stdio.h>
 #include "resource.h"
@@ -139,6 +140,8 @@ BOOL WINAPI pausePlayMediaEnumProc(HWND hwnd, LPARAM lParam)
 	GetWindowText(hwnd, titleBuff, length);
 
 	UINT count = sizeof(mediaCommands) / sizeof(mediaCommands[0]);
+	HWND activeWnd = GetActiveWindow();
+
 	for (UINT i = 0; i < count; i++)
 	{
 		if (strstr(titleBuff, mediaCommands[i].title) > 0)
@@ -152,14 +155,17 @@ BOOL WINAPI pausePlayMediaEnumProc(HWND hwnd, LPARAM lParam)
 			SetWindowLong(hwnd, GWL_EXSTYLE, windowStyleNoActive);
 			SendMessage(hwnd, WM_ACTIVATE, WA_ACTIVE, 0);
 			SendMessage(hwnd, WM_ACTIVATEAPP, WA_ACTIVE, 0);
+			SendMessage(hwnd, WM_SETFOCUS, 0, 0);
 
 			SendMessage(hwnd, WM_KEYDOWN, mediaCommands[i].button, 0);
 			SendMessage(hwnd, WM_KEYUP, mediaCommands[i].button, 0);
 
 			SetWindowLong(hwnd, GWL_EXSTYLE, windowStyles);
 			SendMessage(hwnd, WM_ACTIVATE, WA_INACTIVE, 0);
-			SendMessage(hwnd, WM_ACTIVATEAPP, WA_INACTIVE, 0);
+			SendMessage(hwnd, WM_ACTIVATEAPP, WA_INACTIVE, 0); 
+			SendMessage(hwnd, WM_KILLFOCUS, 0, 0);
 
+			SetActiveWindow(activeWnd);
 			break;
 		}
 	}
@@ -364,10 +370,11 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 	shellData.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_ICON1));
 	strcpy_s(shellData.szTip, "Netflix and Game");
 
+	srand(time(0));
 	Shell_NotifyIcon(NIM_ADD, &shellData);
-	RegisterHotKey(msgWindow, 0, MOD_NOREPEAT, VK_MEDIA_PLAY_PAUSE);
-	RegisterHotKey(msgWindow, 1, MOD_NOREPEAT, VK_MEDIA_PREV_TRACK);
-	RegisterHotKey(msgWindow, 2, MOD_NOREPEAT, VK_MEDIA_NEXT_TRACK);
+	RegisterHotKey(msgWindow, rand(), MOD_NOREPEAT, VK_MEDIA_PLAY_PAUSE);
+	RegisterHotKey(msgWindow, rand(), MOD_NOREPEAT, VK_MEDIA_PREV_TRACK);
+	RegisterHotKey(msgWindow, rand(), MOD_NOREPEAT, VK_MEDIA_NEXT_TRACK);
 
 	MSG msg;
 	while (GetMessage(&msg, NULL, 0, 0) > 0)
