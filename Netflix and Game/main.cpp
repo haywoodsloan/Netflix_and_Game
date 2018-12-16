@@ -135,13 +135,16 @@ bool isActiveWindowFullscreen()
 
 BOOL WINAPI pausePlayMediaEnumProc(HWND hwnd, LPARAM lParam)
 {
+	if (hwnd == msgWindow)
+	{
+		return true;
+	}
+
 	int length = GetWindowTextLength(hwnd) + 1;
 	char* titleBuff = new char[length];
 	GetWindowText(hwnd, titleBuff, length);
 
 	UINT count = sizeof(mediaCommands) / sizeof(mediaCommands[0]);
-	HWND activeWnd = GetActiveWindow();
-
 	for (UINT i = 0; i < count; i++)
 	{
 		if (strstr(titleBuff, mediaCommands[i].title) > 0)
@@ -154,24 +157,17 @@ BOOL WINAPI pausePlayMediaEnumProc(HWND hwnd, LPARAM lParam)
 
 			SetWindowLong(hwnd, GWL_EXSTYLE, windowStyleNoActive);
 			SendMessage(hwnd, WM_ACTIVATE, WA_ACTIVE, 0);
-			SendMessage(hwnd, WM_ACTIVATEAPP, WA_ACTIVE, 0);
-			SendMessage(hwnd, WM_SETFOCUS, 0, 0);
-
 			SendMessage(hwnd, WM_KEYDOWN, mediaCommands[i].button, 0);
 			SendMessage(hwnd, WM_KEYUP, mediaCommands[i].button, 0);
-
-			SetWindowLong(hwnd, GWL_EXSTYLE, windowStyles);
 			SendMessage(hwnd, WM_ACTIVATE, WA_INACTIVE, 0);
-			SendMessage(hwnd, WM_ACTIVATEAPP, WA_INACTIVE, 0); 
-			SendMessage(hwnd, WM_KILLFOCUS, 0, 0);
+			SetWindowLong(hwnd, GWL_EXSTYLE, windowStyles);
 
-			SetActiveWindow(activeWnd);
 			break;
 		}
 	}
 
 	delete[] titleBuff;
-	return 1;
+	return true;
 }
 
 bool pausePlayMedia()
