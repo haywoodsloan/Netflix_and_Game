@@ -135,7 +135,8 @@ bool isActiveWindowFullscreen()
 
 BOOL WINAPI pausePlayMediaEnumProc(HWND hwnd, LPARAM lParam)
 {
-	if (hwnd == msgWindow)
+	if (hwnd == msgWindow ||
+		!IsWindowVisible(hwnd))
 	{
 		return true;
 	}
