@@ -367,11 +367,10 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 	shellData.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_ICON1));
 	strcpy_s(shellData.szTip, "Netflix and Game");
 
-	srand(time(0));
 	Shell_NotifyIcon(NIM_ADD, &shellData);
-	RegisterHotKey(msgWindow, rand(), MOD_NOREPEAT, VK_MEDIA_PLAY_PAUSE);
-	RegisterHotKey(msgWindow, rand(), MOD_NOREPEAT, VK_MEDIA_PREV_TRACK);
-	RegisterHotKey(msgWindow, rand(), MOD_NOREPEAT, VK_MEDIA_NEXT_TRACK);
+	RegisterHotKey(msgWindow, 100, MOD_NOREPEAT, VK_MEDIA_PLAY_PAUSE);
+	RegisterHotKey(msgWindow, 101, MOD_NOREPEAT, VK_MEDIA_PREV_TRACK);
+	RegisterHotKey(msgWindow, 102, MOD_NOREPEAT, VK_MEDIA_NEXT_TRACK);
 
 	MSG msg;
 	while (GetMessage(&msg, NULL, 0, 0) > 0)
