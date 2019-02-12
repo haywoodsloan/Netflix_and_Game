@@ -249,28 +249,7 @@ void saveOptions()
 
 LRESULT CALLBACK msgClassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
-	if (uMsg == WM_HOTKEY)
-	{
-		WORD key = HIWORD(lParam);
-		WORD mods = LOWORD(lParam);
-
-		if (key == VK_MEDIA_PLAY_PAUSE &&
-			(!reqFullscreen || isActiveWindowFullscreen()) &&
-			pausePlayMedia())
-		{
-			changeFGWindowVolume();
-		}
-		else if (key == VK_MEDIA_PREV_TRACK &&
-			(!reqFullscreen || isActiveWindowFullscreen()))
-		{
-			changeFGWindowVolume();
-		}
-		else if (key == VK_MEDIA_NEXT_TRACK)
-		{
-			pausePlayMedia();
-		}
-	}
-	else if (uMsg == shellCallback && lParam == WM_RBUTTONUP)
+	if (uMsg == shellCallback && lParam == WM_RBUTTONUP)
 	{
 		POINT p;
 		GetCursorPos(&p);
@@ -342,6 +321,30 @@ void loadOptions()
 	updateSoundOption();
 }
 
+LRESULT CALLBACK keyHookProc(int nCode, WPARAM wParam, LPARAM lParam)
+{
+	if (nCode == HC_ACTION && wParam == WM_KEYUP)
+	{
+		KBDLLHOOKSTRUCT* keyHook = (KBDLLHOOKSTRUCT*)lParam;
+		switch (keyHook->vkCode)
+		{
+			case VK_MEDIA_PLAY_PAUSE:
+			case VK_MEDIA_PREV_TRACK:
+				if ((!reqFullscreen || isActiveWindowFullscreen()) &&
+					(keyHook->vkCode == VK_MEDIA_PREV_TRACK || pausePlayMedia()))
+				{
+					changeFGWindowVolume();
+				}
+				break;
+			case VK_MEDIA_NEXT_TRACK:
+				pausePlayMedia();
+				break;
+		}
+	}
+
+	return CallNextHookEx(NULL, nCode, wParam, lParam);
+}
+
 int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
 	if (FindWindow(msgClassName, NULL)) return 1;
@@ -368,9 +371,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 	strcpy_s(shellData.szTip, "Netflix and Game");
 
 	Shell_NotifyIcon(NIM_ADD, &shellData);
-	RegisterHotKey(msgWindow, 100, MOD_NOREPEAT, VK_MEDIA_PLAY_PAUSE);
-	RegisterHotKey(msgWindow, 101, MOD_NOREPEAT, VK_MEDIA_PREV_TRACK);
-	RegisterHotKey(msgWindow, 102, MOD_NOREPEAT, VK_MEDIA_NEXT_TRACK);
+	keyHook = SetWindowsHookEx(WH_KEYBOARD_LL, keyHookProc, hInstance, 0);
 
 	MSG msg;
 	while (GetMessage(&msg, NULL, 0, 0) > 0)
@@ -380,5 +381,6 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 	}
 
 	Shell_NotifyIcon(NIM_DELETE, &shellData);
+	UnhookWindowsHookEx(keyHook);
 	return 0;
 }
