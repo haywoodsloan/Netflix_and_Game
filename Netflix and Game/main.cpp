@@ -27,7 +27,7 @@ struct mediaCommand
 	UINT button;
 };
 
-const mediaCommand mediaCommands[] = { {"YouTube",'K'}, {"Netflix", VK_SPACE}, {"Hulu", VK_SPACE},
+const mediaCommand mediaCommands[] = { {"YouTube", NULL}, {"Netflix", VK_SPACE}, {"Hulu", VK_SPACE},
 									  {"Spotify", NULL}, {"Skype", NULL}, {"VLC media player", VK_SPACE},
 									  {"Plex", VK_SPACE}, {"CW iFrame", VK_SPACE}, {"Amazon.com", VK_SPACE} };
 
