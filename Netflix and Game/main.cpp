@@ -27,7 +27,13 @@ struct mediaCommand
 	UINT button;
 };
 
-const mediaCommand mediaCommands[] = { {"YouTube", NULL}, {"Netflix", VK_SPACE}, {"Hulu", VK_SPACE},
+struct mediaEnumInput
+{
+	bool hasChangedVolume;
+	bool simulatePause;
+};
+
+const mediaCommand mediaCommands[] = { {"YouTube", NULL}, {"Netflix", NULL}, {"Hulu", VK_SPACE},
 									  {"Spotify", NULL}, {"Skype", NULL}, {"VLC media player", VK_SPACE},
 									  {"Plex", VK_SPACE}, {"CW iFrame", VK_SPACE}, {"Amazon.com", VK_SPACE} };
 
@@ -134,7 +140,7 @@ bool isActiveWindowFullscreen()
 }
 
 BOOL WINAPI pausePlayMediaEnumProc(HWND hwnd, LPARAM lParam)
-{
+{	
 	if (hwnd == msgWindow ||
 		!IsWindowVisible(hwnd))
 	{
@@ -150,18 +156,36 @@ BOOL WINAPI pausePlayMediaEnumProc(HWND hwnd, LPARAM lParam)
 	{
 		if (strstr(titleBuff, mediaCommands[i].title) > 0)
 		{
-			bool* hasChangedVolume = (bool*)lParam;
-			*hasChangedVolume = true;
+			mediaEnumInput* input = (mediaEnumInput*)lParam;
+			input->hasChangedVolume = true;
 
-			LONG windowStyles = GetWindowLong(hwnd, GWL_EXSTYLE);
-			LONG windowStyleNoActive = windowStyles | WS_EX_NOACTIVATE;
+			if (input->simulatePause && mediaCommands[i].button == NULL)
+			{
+				KEYBDINPUT kb = {};
+				kb.wVk = VK_MEDIA_PLAY_PAUSE;
+				kb.dwExtraInfo = GetMessageExtraInfo();
 
-			SetWindowLong(hwnd, GWL_EXSTYLE, windowStyleNoActive);
-			SendMessage(hwnd, WM_ACTIVATE, WA_ACTIVE, 0);
-			SendMessage(hwnd, WM_KEYDOWN, mediaCommands[i].button, 0);
-			SendMessage(hwnd, WM_KEYUP, mediaCommands[i].button, 0);
-			SendMessage(hwnd, WM_ACTIVATE, WA_INACTIVE, 0);
-			SetWindowLong(hwnd, GWL_EXSTYLE, windowStyles);
+				INPUT input = {};
+				input.type = INPUT_KEYBOARD;
+				input.ki = kb;
+
+				SendInput(1, &input, sizeof(INPUT));
+				
+				kb.dwFlags = KEYEVENTF_KEYUP;
+				SendInput(1, &input, sizeof(INPUT));
+			}
+			else
+			{
+				LONG windowStyles = GetWindowLong(hwnd, GWL_EXSTYLE);
+				LONG windowStyleNoActive = windowStyles | WS_EX_NOACTIVATE;
+
+				SetWindowLong(hwnd, GWL_EXSTYLE, windowStyleNoActive);
+				SendMessage(hwnd, WM_ACTIVATE, WA_ACTIVE, 0);
+				SendMessage(hwnd, WM_KEYDOWN, mediaCommands[i].button, 0);
+				SendMessage(hwnd, WM_KEYUP, mediaCommands[i].button, 0);
+				SendMessage(hwnd, WM_ACTIVATE, WA_INACTIVE, 0);
+				SetWindowLong(hwnd, GWL_EXSTYLE, windowStyles);
+			}
 
 			break;
 		}
@@ -171,15 +195,18 @@ BOOL WINAPI pausePlayMediaEnumProc(HWND hwnd, LPARAM lParam)
 	return true;
 }
 
-bool pausePlayMedia()
+bool pausePlayMedia(bool simulatePause)
 {
-	bool hasChangedVolume = false;
+	mediaEnumInput input;
+	input.hasChangedVolume = false;
+	input.simulatePause = simulatePause;
+
 	HWND activeHwnd = GetForegroundWindow();
 
-	EnumWindows(pausePlayMediaEnumProc, (LPARAM)&hasChangedVolume);
+	EnumWindows(pausePlayMediaEnumProc, (LPARAM)&input);
 	SetForegroundWindow(activeHwnd);
 
-	return hasChangedVolume;
+	return input.hasChangedVolume;
 }
 
 void updateSoundOption()
@@ -331,13 +358,13 @@ LRESULT CALLBACK keyHookProc(int nCode, WPARAM wParam, LPARAM lParam)
 			case VK_MEDIA_PLAY_PAUSE:
 			case VK_MEDIA_PREV_TRACK:
 				if ((!reqFullscreen || isActiveWindowFullscreen()) &&
-					(keyHook->vkCode == VK_MEDIA_PREV_TRACK || pausePlayMedia()))
+					(keyHook->vkCode == VK_MEDIA_PREV_TRACK || pausePlayMedia(false)))
 				{
 					changeFGWindowVolume();
 				}
 				break;
 			case VK_MEDIA_NEXT_TRACK:
-				pausePlayMedia();
+				pausePlayMedia(true);
 				break;
 		}
 	}
