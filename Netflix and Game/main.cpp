@@ -140,7 +140,7 @@ bool isActiveWindowFullscreen()
 }
 
 BOOL WINAPI pausePlayMediaEnumProc(HWND hwnd, LPARAM lParam)
-{	
+{
 	if (hwnd == msgWindow ||
 		!IsWindowVisible(hwnd))
 	{
@@ -163,18 +163,18 @@ BOOL WINAPI pausePlayMediaEnumProc(HWND hwnd, LPARAM lParam)
 			{
 				KEYBDINPUT kb = {};
 				kb.wVk = VK_MEDIA_PLAY_PAUSE;
-				kb.dwExtraInfo = GetMessageExtraInfo();
+				kb.dwExtraInfo = simulatedInput;
 
 				INPUT input = {};
 				input.type = INPUT_KEYBOARD;
 				input.ki = kb;
 
 				SendInput(1, &input, sizeof(INPUT));
-				
+
 				kb.dwFlags = KEYEVENTF_KEYUP;
 				SendInput(1, &input, sizeof(INPUT));
 			}
-			else
+			else if (mediaCommands[i].button != NULL)
 			{
 				LONG windowStyles = GetWindowLong(hwnd, GWL_EXSTYLE);
 				LONG windowStyleNoActive = windowStyles | WS_EX_NOACTIVATE;
@@ -350,22 +350,32 @@ void loadOptions()
 
 LRESULT CALLBACK keyHookProc(int nCode, WPARAM wParam, LPARAM lParam)
 {
-	if (nCode == HC_ACTION && wParam == WM_KEYUP)
+	if (nCode == HC_ACTION && wParam == WM_KEYDOWN)
 	{
 		KBDLLHOOKSTRUCT* keyHook = (KBDLLHOOKSTRUCT*)lParam;
 		switch (keyHook->vkCode)
 		{
-			case VK_MEDIA_PLAY_PAUSE:
-			case VK_MEDIA_PREV_TRACK:
-				if ((!reqFullscreen || isActiveWindowFullscreen()) &&
-					(keyHook->vkCode == VK_MEDIA_PREV_TRACK || pausePlayMedia(false)))
-				{
-					changeFGWindowVolume();
-				}
+		case VK_MEDIA_PREV_TRACK:
+			if ((!reqFullscreen || isActiveWindowFullscreen()))
+			{
+				changeFGWindowVolume();
+			}
+			return TRUE;
+		case VK_MEDIA_PLAY_PAUSE:
+			if (keyHook->dwExtraInfo & simulatedInput)
+			{
 				break;
-			case VK_MEDIA_NEXT_TRACK:
-				pausePlayMedia(true);
-				break;
+			}
+
+			if ((!reqFullscreen || isActiveWindowFullscreen()) &&
+				pausePlayMedia(false))
+			{
+				changeFGWindowVolume();
+			}
+			break;
+		case VK_MEDIA_NEXT_TRACK:
+			pausePlayMedia(true);
+			return TRUE;
 		}
 	}
 
