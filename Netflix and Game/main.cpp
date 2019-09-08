@@ -353,29 +353,32 @@ LRESULT CALLBACK keyHookProc(int nCode, WPARAM wParam, LPARAM lParam)
 	if (nCode == HC_ACTION && wParam == WM_KEYDOWN)
 	{
 		KBDLLHOOKSTRUCT* keyHook = (KBDLLHOOKSTRUCT*)lParam;
-		switch (keyHook->vkCode)
+		if (!(keyHook->flags & LLKHF_ALTDOWN))
 		{
-		case VK_MEDIA_PREV_TRACK:
-			if ((!reqFullscreen || isActiveWindowFullscreen()))
+			switch (keyHook->vkCode)
 			{
-				changeFGWindowVolume();
-			}
-			return TRUE;
-		case VK_MEDIA_PLAY_PAUSE:
-			if (keyHook->dwExtraInfo & simulatedInput)
-			{
-				break;
-			}
+			case VK_MEDIA_PREV_TRACK:
+				if ((!reqFullscreen || isActiveWindowFullscreen()))
+				{
+					changeFGWindowVolume();
+				}
+				return TRUE;
+			case VK_MEDIA_PLAY_PAUSE:
+				if (keyHook->dwExtraInfo & simulatedInput)
+				{
+					break;
+				}
 
-			if ((!reqFullscreen || isActiveWindowFullscreen()) &&
-				pausePlayMedia(false))
-			{
-				changeFGWindowVolume();
+				if ((!reqFullscreen || isActiveWindowFullscreen()) &&
+					pausePlayMedia(false))
+				{
+					changeFGWindowVolume();
+				}
+				break;
+			case VK_MEDIA_NEXT_TRACK:
+				pausePlayMedia(true);
+				return TRUE;
 			}
-			break;
-		case VK_MEDIA_NEXT_TRACK:
-			pausePlayMedia(true);
-			return TRUE;
 		}
 	}
 
