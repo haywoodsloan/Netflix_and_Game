@@ -24,21 +24,25 @@ bool reqFullscreen = true;
 bool prevTrackKeyDown = false;
 bool nextTrackKeyDown = false;
 
-struct mediaCommand
+enum class MatchType { title, exe };
+struct MediaCommand
 {
-	char* title;
+	MatchType matchType;
+	char* matchStr;
 	UINT button;
 };
 
-struct mediaEnumInput
+struct MediaEnumInput
 {
 	bool hasChangedVolume;
 	bool simulatePause;
 };
 
-const mediaCommand mediaCommands[] = { {"YouTube", NULL}, {"Netflix", NULL}, {"Hulu", VK_SPACE},
-									  {"Spotify", NULL}, {"Skype", NULL}, {"VLC media player", VK_SPACE},
-									  {"Plex", VK_SPACE}, {"CW iFrame", VK_SPACE}, {"Amazon.com", VK_SPACE} };
+const MediaCommand mediaCommands[] = { {MatchType::title, "YouTube", NULL}, {MatchType::title, "Netflix", NULL},
+									   {MatchType::title, "Hulu", VK_SPACE},{MatchType::exe, "Spotify", NULL},
+									   {MatchType::title, "Skype", NULL}, {MatchType::title, "VLC media player", VK_SPACE},
+									   {MatchType::title, "Plex", VK_SPACE}, {MatchType::title, "CW iFrame", VK_SPACE},
+									   {MatchType::title, "Amazon.com", VK_SPACE} };
 
 void changeFGWindowVolume()
 {
@@ -51,7 +55,7 @@ void changeFGWindowVolume()
 	UINT count = sizeof(mediaCommands) / sizeof(mediaCommands[0]);
 	for (UINT i = 0; i < count; i++)
 	{
-		if (strstr(titleBuff, mediaCommands[i].title) > 0) return;
+		if (strstr(titleBuff, mediaCommands[i].matchStr) > 0) return;
 	}
 
 	IMMDevice *mmDevice;
@@ -150,6 +154,13 @@ BOOL WINAPI pausePlayMediaEnumProc(HWND hwnd, LPARAM lParam)
 		return true;
 	}
 
+	DWORD exeProcId = 0;
+	char exeBuff[MAX_PATH];
+	GetWindowThreadProcessId(hwnd, &exeProcId);
+	HANDLE proc = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, exeProcId);
+	GetModuleFileName((HMODULE)proc, exeBuff, MAX_PATH);
+	CloseHandle(proc);
+
 	int length = GetWindowTextLength(hwnd) + 1;
 	char* titleBuff = new char[length];
 	GetWindowText(hwnd, titleBuff, length);
@@ -157,9 +168,10 @@ BOOL WINAPI pausePlayMediaEnumProc(HWND hwnd, LPARAM lParam)
 	UINT count = sizeof(mediaCommands) / sizeof(mediaCommands[0]);
 	for (UINT i = 0; i < count; i++)
 	{
-		if (strstr(titleBuff, mediaCommands[i].title) > 0)
+		if ((mediaCommands->matchType == MatchType::title && strstr(titleBuff, mediaCommands[i].matchStr) > 0) ||
+			(mediaCommands->matchType == MatchType::exe && strstr(exeBuff, mediaCommands[i].matchStr) > 0))
 		{
-			mediaEnumInput* input = (mediaEnumInput*)lParam;
+			MediaEnumInput* input = (MediaEnumInput*)lParam;
 			if (input->simulatePause && !input->hasChangedVolume &&
 				mediaCommands[i].button == NULL)
 			{
@@ -197,7 +209,7 @@ BOOL WINAPI pausePlayMediaEnumProc(HWND hwnd, LPARAM lParam)
 
 bool pausePlayMedia(bool simulatePause)
 {
-	mediaEnumInput input;
+	MediaEnumInput input;
 	input.hasChangedVolume = false;
 	input.simulatePause = simulatePause;
 
