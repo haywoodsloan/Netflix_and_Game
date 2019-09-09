@@ -21,6 +21,9 @@ UINT taskbarCreateMsg;
 UINT soundOption = s25ItemID;
 bool reqFullscreen = true;
 
+bool prevTrackKeyDown = false;
+bool nextTrackKeyDown = false;
+
 struct mediaCommand
 {
 	char* title;
@@ -157,9 +160,8 @@ BOOL WINAPI pausePlayMediaEnumProc(HWND hwnd, LPARAM lParam)
 		if (strstr(titleBuff, mediaCommands[i].title) > 0)
 		{
 			mediaEnumInput* input = (mediaEnumInput*)lParam;
-			input->hasChangedVolume = true;
-
-			if (input->simulatePause && mediaCommands[i].button == NULL)
+			if (input->simulatePause && !input->hasChangedVolume &&
+				mediaCommands[i].button == NULL)
 			{
 				KEYBDINPUT kb = {};
 				kb.wVk = VK_MEDIA_PLAY_PAUSE;
@@ -169,9 +171,6 @@ BOOL WINAPI pausePlayMediaEnumProc(HWND hwnd, LPARAM lParam)
 				input.type = INPUT_KEYBOARD;
 				input.ki = kb;
 
-				SendInput(1, &input, sizeof(INPUT));
-
-				kb.dwFlags = KEYEVENTF_KEYUP;
 				SendInput(1, &input, sizeof(INPUT));
 			}
 			else if (mediaCommands[i].button != NULL)
@@ -187,6 +186,7 @@ BOOL WINAPI pausePlayMediaEnumProc(HWND hwnd, LPARAM lParam)
 				SetWindowLong(hwnd, GWL_EXSTYLE, windowStyles);
 			}
 
+			input->hasChangedVolume = true;
 			break;
 		}
 	}
@@ -350,34 +350,55 @@ void loadOptions()
 
 LRESULT CALLBACK keyHookProc(int nCode, WPARAM wParam, LPARAM lParam)
 {
-	if (nCode == HC_ACTION && wParam == WM_KEYDOWN)
+	if (nCode == HC_ACTION)
 	{
 		KBDLLHOOKSTRUCT* keyHook = (KBDLLHOOKSTRUCT*)lParam;
 		if (!(keyHook->flags & LLKHF_ALTDOWN))
 		{
-			switch (keyHook->vkCode)
+			if (wParam == WM_KEYDOWN)
 			{
-			case VK_MEDIA_PREV_TRACK:
-				if ((!reqFullscreen || isActiveWindowFullscreen()))
+				switch (keyHook->vkCode)
 				{
-					changeFGWindowVolume();
-				}
-				return TRUE;
-			case VK_MEDIA_PLAY_PAUSE:
-				if (keyHook->dwExtraInfo & simulatedInput)
-				{
-					break;
-				}
+				case VK_MEDIA_PREV_TRACK:
+					if ((!reqFullscreen || isActiveWindowFullscreen()) &&
+						!prevTrackKeyDown)
+					{
+						prevTrackKeyDown = true;
+						changeFGWindowVolume();
+					}
+					return TRUE;
+				case VK_MEDIA_PLAY_PAUSE:
+					if (keyHook->dwExtraInfo & simulatedInput)
+					{
+						break;
+					}
 
-				if ((!reqFullscreen || isActiveWindowFullscreen()) &&
-					pausePlayMedia(false))
-				{
-					changeFGWindowVolume();
+					if ((!reqFullscreen || isActiveWindowFullscreen()) &&
+						pausePlayMedia(false))
+					{
+						changeFGWindowVolume();
+					}
+					break;
+				case VK_MEDIA_NEXT_TRACK:
+					if (!nextTrackKeyDown)
+					{
+						nextTrackKeyDown = true;
+						pausePlayMedia(true);
+					}
+					return TRUE;
 				}
-				break;
-			case VK_MEDIA_NEXT_TRACK:
-				pausePlayMedia(true);
-				return TRUE;
+			}
+			else if (wParam == WM_KEYUP)
+			{
+				switch (keyHook->vkCode)
+				{
+				case VK_MEDIA_PREV_TRACK:
+					prevTrackKeyDown = false;
+					return TRUE;
+				case VK_MEDIA_NEXT_TRACK:
+					nextTrackKeyDown = false;
+					return TRUE;
+				}
 			}
 		}
 	}
