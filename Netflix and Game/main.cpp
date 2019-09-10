@@ -46,19 +46,40 @@ const MediaCommand mediaCommands[] = {
 	{MatchType::title, "Amazon.com", VK_SPACE}
 };
 
-void changeFGWindowVolume()
+const MediaCommand* getMediaCommand(HWND hwnd)
 {
-	if (soundOption == dncItemID) return;
+	DWORD exeProcId = 0;
+	char exeBuff[MAX_PATH];
+	GetWindowThreadProcessId(hwnd, &exeProcId);
+	HANDLE proc = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, exeProcId);
+	GetModuleFileName((HMODULE)proc, exeBuff, MAX_PATH);
+	CloseHandle(proc);
 
-	char titleBuff[128];
-	HWND activeHWND = GetForegroundWindow();
-	GetWindowText(activeHWND, titleBuff, 128);
+	int length = GetWindowTextLength(hwnd) + 1;
+	char* titleBuff = new char[length];
+	GetWindowText(hwnd, titleBuff, length);
 
 	UINT count = sizeof(mediaCommands) / sizeof(mediaCommands[0]);
 	for (UINT i = 0; i < count; i++)
 	{
-		if (strstr(titleBuff, mediaCommands[i].matchStr) > 0) return;
+		if ((mediaCommands->matchType == MatchType::title && strstr(titleBuff, mediaCommands[i].matchStr) > 0) ||
+			(mediaCommands->matchType == MatchType::exe && strstr(exeBuff, mediaCommands[i].matchStr) > 0))
+		{
+			delete[] titleBuff;
+			return &mediaCommands[i];
+		}
 	}
+
+	delete[] titleBuff;
+	return NULL;
+}
+
+void changeFGWindowVolume()
+{
+	if (soundOption == dncItemID) return;
+
+	HWND activeHWND = GetForegroundWindow();
+	if (getMediaCommand(activeHWND)) return;
 
 	IMMDevice *mmDevice;
 	IMMDeviceEnumerator *mmDeviceEnum;
@@ -156,56 +177,39 @@ BOOL WINAPI pausePlayMediaEnumProc(HWND hwnd, LPARAM lParam)
 		return true;
 	}
 
-	DWORD exeProcId = 0;
-	char exeBuff[MAX_PATH];
-	GetWindowThreadProcessId(hwnd, &exeProcId);
-	HANDLE proc = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, exeProcId);
-	GetModuleFileName((HMODULE)proc, exeBuff, MAX_PATH);
-	CloseHandle(proc);
-
-	int length = GetWindowTextLength(hwnd) + 1;
-	char* titleBuff = new char[length];
-	GetWindowText(hwnd, titleBuff, length);
-
-	UINT count = sizeof(mediaCommands) / sizeof(mediaCommands[0]);
-	for (UINT i = 0; i < count; i++)
+	const MediaCommand* mediaCommand = getMediaCommand(hwnd);
+	if (mediaCommand)
 	{
-		if ((mediaCommands->matchType == MatchType::title && strstr(titleBuff, mediaCommands[i].matchStr) > 0) ||
-			(mediaCommands->matchType == MatchType::exe && strstr(exeBuff, mediaCommands[i].matchStr) > 0))
+		MediaEnumInput* input = (MediaEnumInput*)lParam;
+		if (input->simulatePause && !input->hasChangedVolume &&
+			mediaCommand->button == NULL)
 		{
-			MediaEnumInput* input = (MediaEnumInput*)lParam;
-			if (input->simulatePause && !input->hasChangedVolume &&
-				mediaCommands[i].button == NULL)
-			{
-				KEYBDINPUT kb = {};
-				kb.wVk = VK_MEDIA_PLAY_PAUSE;
-				kb.dwExtraInfo = simulatedInput;
+			KEYBDINPUT kb = {};
+			kb.wVk = VK_MEDIA_PLAY_PAUSE;
+			kb.dwExtraInfo = simulatedInput;
 
-				INPUT input = {};
-				input.type = INPUT_KEYBOARD;
-				input.ki = kb;
+			INPUT input = {};
+			input.type = INPUT_KEYBOARD;
+			input.ki = kb;
 
-				SendInput(1, &input, sizeof(INPUT));
-			}
-			else if (mediaCommands[i].button != NULL)
-			{
-				LONG windowStyles = GetWindowLong(hwnd, GWL_EXSTYLE);
-				LONG windowStyleNoActive = windowStyles | WS_EX_NOACTIVATE;
-
-				SetWindowLong(hwnd, GWL_EXSTYLE, windowStyleNoActive);
-				SendMessage(hwnd, WM_ACTIVATE, WA_ACTIVE, 0);
-				SendMessage(hwnd, WM_KEYDOWN, mediaCommands[i].button, 0);
-				SendMessage(hwnd, WM_KEYUP, mediaCommands[i].button, 0);
-				SendMessage(hwnd, WM_ACTIVATE, WA_INACTIVE, 0);
-				SetWindowLong(hwnd, GWL_EXSTYLE, windowStyles);
-			}
-
-			input->hasChangedVolume = true;
-			break;
+			SendInput(1, &input, sizeof(INPUT));
 		}
+		else if (mediaCommand->button != NULL)
+		{
+			LONG windowStyles = GetWindowLong(hwnd, GWL_EXSTYLE);
+			LONG windowStyleNoActive = windowStyles | WS_EX_NOACTIVATE;
+
+			SetWindowLong(hwnd, GWL_EXSTYLE, windowStyleNoActive);
+			SendMessage(hwnd, WM_ACTIVATE, WA_ACTIVE, 0);
+			SendMessage(hwnd, WM_KEYDOWN, mediaCommand->button, 0);
+			SendMessage(hwnd, WM_KEYUP, mediaCommand->button, 0);
+			SendMessage(hwnd, WM_ACTIVATE, WA_INACTIVE, 0);
+			SetWindowLong(hwnd, GWL_EXSTYLE, windowStyles);
+		}
+
+		input->hasChangedVolume = true;
 	}
 
-	delete[] titleBuff;
 	return true;
 }
 
