@@ -40,7 +40,7 @@ struct MediaEnumInput
 
 const MediaCommand mediaCommands[] = {
 	{MatchType::title, "YouTube", NULL}, {MatchType::title, "Netflix", NULL},
-	{MatchType::title, "Hulu", VK_SPACE},{MatchType::exe, "Spotify", NULL},
+	{MatchType::title, "Hulu", NULL},{MatchType::exe, "Spotify", NULL},
 	{MatchType::title, "Skype", NULL}, {MatchType::title, "VLC media player", VK_SPACE},
 	{MatchType::title, "Plex", VK_SPACE}, {MatchType::title, "CW iFrame", VK_SPACE},
 	{MatchType::title, "Amazon.com", VK_SPACE}
