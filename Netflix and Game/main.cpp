@@ -23,6 +23,7 @@ bool reqFullscreen = true;
 
 bool prevTrackKeyDown = false;
 bool nextTrackKeyDown = false;
+bool xboxButtonDown = false;
 
 enum class MatchType { title, exe };
 struct MediaCommand
@@ -81,13 +82,13 @@ void changeFGWindowVolume()
 	HWND activeHWND = GetForegroundWindow();
 	if (getMediaCommand(activeHWND)) return;
 
-	IMMDevice *mmDevice;
-	IMMDeviceEnumerator *mmDeviceEnum;
-	IAudioSessionManager2 *sessionManager;
-	IAudioSessionEnumerator *sessionEnum;
-	IAudioSessionControl *sessionControl;
-	IAudioSessionControl2 *sessionControl2;
-	ISimpleAudioVolume *audioVolume;
+	IMMDevice* mmDevice;
+	IMMDeviceEnumerator* mmDeviceEnum;
+	IAudioSessionManager2* sessionManager;
+	IAudioSessionEnumerator* sessionEnum;
+	IAudioSessionControl* sessionControl;
+	IAudioSessionControl2* sessionControl2;
+	ISimpleAudioVolume* audioVolume;
 
 	CoCreateInstance(__uuidof(MMDeviceEnumerator), 0, CLSCTX_ALL, __uuidof(IMMDeviceEnumerator), (void**)&mmDeviceEnum);
 	mmDeviceEnum->GetDefaultAudioEndpoint(eRender, eMultimedia, &mmDevice);
@@ -404,6 +405,17 @@ LRESULT CALLBACK keyHookProc(int nCode, WPARAM wParam, LPARAM lParam)
 						pausePlayMedia(true);
 					}
 					return TRUE;
+				case /* xbox button */ 7:
+					if (!xboxButtonDown)
+					{
+						xboxButtonDown = true;
+						if ((!reqFullscreen || isActiveWindowFullscreen()) &&
+							pausePlayMedia(true))
+						{
+							changeFGWindowVolume();
+						}
+					}
+					return TRUE;
 				}
 			}
 			else if (wParam == WM_KEYUP)
@@ -415,6 +427,9 @@ LRESULT CALLBACK keyHookProc(int nCode, WPARAM wParam, LPARAM lParam)
 					return TRUE;
 				case VK_MEDIA_NEXT_TRACK:
 					nextTrackKeyDown = false;
+					return TRUE;
+				case /* xbox button */ 7:
+					xboxButtonDown = false;
 					return TRUE;
 				}
 			}
