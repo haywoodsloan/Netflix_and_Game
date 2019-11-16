@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include "resource.h"
 
+#define XBOX_BUTTON 7
 #define shellCallback 530
 #define msgClassName "msgClass"
 #define msgWindowName "Netflix and Game"
@@ -36,12 +37,11 @@ struct MediaCommand
 struct MediaEnumInput
 {
 	bool hasChangedVolume;
-	bool simulatePause;
 };
 
 const MediaCommand mediaCommands[] = {
 	{MatchType::title, "YouTube", NULL}, {MatchType::title, "Netflix", NULL},
-	{MatchType::title, "Hulu", NULL},{MatchType::exe, "Spotify", NULL},
+	{MatchType::title, "Hulu", VK_SPACE},{MatchType::exe, "Spotify", NULL},
 	{MatchType::title, "Skype", NULL}, {MatchType::title, "VLC media player", VK_SPACE},
 	{MatchType::title, "Plex", VK_SPACE}, {MatchType::title, "CW iFrame", VK_SPACE},
 	{MatchType::title, "Amazon.com", VK_SPACE}
@@ -182,8 +182,7 @@ BOOL WINAPI pausePlayMediaEnumProc(HWND hwnd, LPARAM lParam)
 	if (mediaCommand)
 	{
 		MediaEnumInput* input = (MediaEnumInput*)lParam;
-		if (input->simulatePause && !input->hasChangedVolume &&
-			mediaCommand->button == NULL)
+		if (!input->hasChangedVolume && mediaCommand->button == NULL)
 		{
 			KEYBDINPUT kb = {};
 			kb.wVk = VK_MEDIA_PLAY_PAUSE;
@@ -214,11 +213,10 @@ BOOL WINAPI pausePlayMediaEnumProc(HWND hwnd, LPARAM lParam)
 	return true;
 }
 
-bool pausePlayMedia(bool simulatePause)
+bool pausePlayMedia()
 {
 	MediaEnumInput input;
 	input.hasChangedVolume = false;
-	input.simulatePause = simulatePause;
 
 	HWND activeHwnd = GetForegroundWindow();
 
@@ -393,24 +391,24 @@ LRESULT CALLBACK keyHookProc(int nCode, WPARAM wParam, LPARAM lParam)
 					}
 
 					if ((!reqFullscreen || isActiveWindowFullscreen()) &&
-						pausePlayMedia(false))
+						pausePlayMedia())
 					{
 						changeFGWindowVolume();
 					}
-					break;
+					return TRUE;
 				case VK_MEDIA_NEXT_TRACK:
 					if (!nextTrackKeyDown)
 					{
 						nextTrackKeyDown = true;
-						pausePlayMedia(true);
+						pausePlayMedia();
 					}
 					return TRUE;
-				case /* xbox button */ 7:
+				case XBOX_BUTTON:
 					if (!xboxButtonDown)
 					{
 						xboxButtonDown = true;
 						if ((!reqFullscreen || isActiveWindowFullscreen()) &&
-							pausePlayMedia(true))
+							pausePlayMedia())
 						{
 							changeFGWindowVolume();
 						}
@@ -428,7 +426,7 @@ LRESULT CALLBACK keyHookProc(int nCode, WPARAM wParam, LPARAM lParam)
 				case VK_MEDIA_NEXT_TRACK:
 					nextTrackKeyDown = false;
 					return TRUE;
-				case /* xbox button */ 7:
+				case XBOX_BUTTON:
 					xboxButtonDown = false;
 					return TRUE;
 				}
