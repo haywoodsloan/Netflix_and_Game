@@ -4,6 +4,7 @@
 #include <time.h>
 #include <ShlObj.h>
 #include <stdio.h>
+#include <psapi.h>
 #include "resource.h"
 
 #include "media_ptr.h"
@@ -55,7 +56,7 @@ const MediaCommand* getMediaCommand(HWND hwnd)
 	char exeBuff[MAX_PATH];
 	GetWindowThreadProcessId(hwnd, &exeProcId);
 	HANDLE proc = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, exeProcId);
-	GetModuleFileName((HMODULE)proc, exeBuff, MAX_PATH);
+	GetModuleFileNameEx((HMODULE)proc, 0, exeBuff, MAX_PATH);
 	CloseHandle(proc);
 
 	int length = GetWindowTextLength(hwnd) + 1;
@@ -65,8 +66,8 @@ const MediaCommand* getMediaCommand(HWND hwnd)
 	UINT count = sizeof(mediaCommands) / sizeof(mediaCommands[0]);
 	for (UINT i = 0; i < count; i++)
 	{
-		if ((mediaCommands->matchType == MatchType::title && strstr(titleBuff, mediaCommands[i].matchStr) > 0) ||
-			(mediaCommands->matchType == MatchType::exe && strstr(exeBuff, mediaCommands[i].matchStr) > 0))
+		if ((mediaCommands[i].matchType == MatchType::title && strstr(titleBuff, mediaCommands[i].matchStr) > 0) ||
+			(mediaCommands[i].matchType == MatchType::exe && strstr(exeBuff, mediaCommands[i].matchStr) > 0))
 		{
 			delete[] titleBuff;
 			return &mediaCommands[i];
@@ -393,7 +394,7 @@ LRESULT CALLBACK keyHookProc(int nCode, WPARAM wParam, LPARAM lParam)
 						break;
 					}
 
-					if ((!reqFullscreen || isActiveWindowFullscreen()))
+					if (!reqFullscreen || isActiveWindowFullscreen())
 					{
 						PausePlayResult result = pausePlayMedia();
 						if (result.hasChangedVolume) {
@@ -412,7 +413,7 @@ LRESULT CALLBACK keyHookProc(int nCode, WPARAM wParam, LPARAM lParam)
 					if (!xboxButtonDown)
 					{
 						xboxButtonDown = true;
-						if ((!reqFullscreen || isActiveWindowFullscreen()))
+						if (!reqFullscreen || isActiveWindowFullscreen())
 						{
 							PausePlayResult result = pausePlayMedia();
 							if (result.hasChangedVolume) {
