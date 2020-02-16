@@ -6,6 +6,8 @@
 #include <stdio.h>
 #include "resource.h"
 
+#include "media_ptr.h"
+
 #define XBOX_BUTTON 7
 #define shellCallback 530
 #define msgClassName "msgClass"
@@ -34,7 +36,7 @@ struct MediaCommand
 	UINT button;
 };
 
-struct MediaEnumInput
+struct PausePlayResult
 {
 	bool hasChangedVolume;
 };
@@ -75,6 +77,43 @@ const MediaCommand* getMediaCommand(HWND hwnd)
 	return NULL;
 }
 
+media_ptr<IAudioSessionControl*> getMediaSession(HWND hwnd) {
+	media_ptr<IMMDeviceEnumerator*> mmDeviceEnum;
+	CoCreateInstance(__uuidof(MMDeviceEnumerator), 0, CLSCTX_ALL, __uuidof(IMMDeviceEnumerator), (void**)&mmDeviceEnum);
+
+	media_ptr<IMMDevice*> mmDevice;
+	mmDeviceEnum->GetDefaultAudioEndpoint(eRender, eMultimedia, &mmDevice);
+
+	media_ptr<IAudioSessionManager2*> sessionManager;
+	mmDevice->Activate(__uuidof(IAudioSessionManager2), CLSCTX_ALL, 0, (void**)&sessionManager);
+
+	media_ptr<IAudioSessionEnumerator*> sessionEnum;
+	sessionManager->GetSessionEnumerator(&sessionEnum);
+
+	DWORD targetPid;
+	GetWindowThreadProcessId(hwnd, &targetPid);
+
+	int sessionCount;
+	sessionEnum->GetCount(&sessionCount);
+	for (int i = 0; i < sessionCount; i++)
+	{
+		media_ptr<IAudioSessionControl*> sessionControl;
+		sessionEnum->GetSession(i, &sessionControl);
+
+		media_ptr<IAudioSessionControl2*> sessionControl2;
+		sessionControl->QueryInterface(__uuidof(IAudioSessionControl2), (void**)&sessionControl2);
+
+		DWORD pid;
+		sessionControl2->GetProcessId(&pid);
+		if (targetPid == pid)
+		{
+			return sessionControl;
+		}
+	}
+
+	return media_ptr<IAudioSessionControl*>(nullptr);
+}
+
 void changeFGWindowVolume()
 {
 	if (soundOption == dncItemID) return;
@@ -82,72 +121,38 @@ void changeFGWindowVolume()
 	HWND activeHWND = GetForegroundWindow();
 	if (getMediaCommand(activeHWND)) return;
 
-	IMMDevice* mmDevice;
-	IMMDeviceEnumerator* mmDeviceEnum;
-	IAudioSessionManager2* sessionManager;
-	IAudioSessionEnumerator* sessionEnum;
-	IAudioSessionControl* sessionControl;
-	IAudioSessionControl2* sessionControl2;
-	ISimpleAudioVolume* audioVolume;
-
-	CoCreateInstance(__uuidof(MMDeviceEnumerator), 0, CLSCTX_ALL, __uuidof(IMMDeviceEnumerator), (void**)&mmDeviceEnum);
-	mmDeviceEnum->GetDefaultAudioEndpoint(eRender, eMultimedia, &mmDevice);
-	mmDevice->Activate(__uuidof(IAudioSessionManager2), CLSCTX_ALL, 0, (void**)&sessionManager);
-	sessionManager->GetSessionEnumerator(&sessionEnum);
-
-	DWORD activePid;
-	GetWindowThreadProcessId(activeHWND, &activePid);
-
-	int sessionCount;
-	sessionEnum->GetCount(&sessionCount);
-	for (int i = 0; i < sessionCount; i++)
+	media_ptr<IAudioSessionControl*> sessionControl = getMediaSession(activeHWND);
+	if (sessionControl)
 	{
-		sessionEnum->GetSession(i, &sessionControl);
-		sessionControl->QueryInterface(__uuidof(IAudioSessionControl2), (void**)&sessionControl2);
+		media_ptr<ISimpleAudioVolume*> audioVolume;
+		sessionControl->QueryInterface(__uuidof(ISimpleAudioVolume), (void**)&audioVolume);
 
-		DWORD pid;
-		sessionControl2->GetProcessId(&pid);
-		if (activePid == pid)
+		BOOL muted;
+		audioVolume->GetMute(&muted);
+
+		float volumeLevel;
+		audioVolume->GetMasterVolume(&volumeLevel);
+
+		if (soundOption == muteItemID)
 		{
-			sessionControl->QueryInterface(__uuidof(ISimpleAudioVolume), (void**)&audioVolume);
+			audioVolume->SetMute(!muted, 0);
 
-			BOOL muted;
-			audioVolume->GetMute(&muted);
-
-			float volumeLevel;
-			audioVolume->GetMasterVolume(&volumeLevel);
-
-			if (soundOption == muteItemID)
+			if (volumeLevel != 1.0f)
 			{
-				audioVolume->SetMute(!muted, 0);
-
-				if (volumeLevel != 1.0f)
-				{
-					audioVolume->SetMasterVolume(1.0f, 0);
-				}
+				audioVolume->SetMasterVolume(1.0f, 0);
 			}
-			else
-			{
-				float newVolumeLevel = (soundOption - sBaseItemID) / 100.0f;
-				audioVolume->SetMasterVolume(volumeLevel == 1.0f ? newVolumeLevel : 1.0f, 0);
-
-				if (muted)
-				{
-					audioVolume->SetMute(false, 0);
-				}
-			}
-
-			audioVolume->Release();
 		}
+		else
+		{
+			float newVolumeLevel = (soundOption - sBaseItemID) / 100.0f;
+			audioVolume->SetMasterVolume(volumeLevel == 1.0f ? newVolumeLevel : 1.0f, 0);
 
-		sessionControl->Release();
-		sessionControl2->Release();
+			if (muted)
+			{
+				audioVolume->SetMute(false, 0);
+			}
+		}
 	}
-
-	sessionEnum->Release();
-	sessionManager->Release();
-	mmDevice->Release();
-	mmDeviceEnum->Release();
 }
 
 bool isActiveWindowFullscreen()
@@ -181,7 +186,7 @@ BOOL WINAPI pausePlayMediaEnumProc(HWND hwnd, LPARAM lParam)
 	const MediaCommand* mediaCommand = getMediaCommand(hwnd);
 	if (mediaCommand)
 	{
-		MediaEnumInput* input = (MediaEnumInput*)lParam;
+		PausePlayResult* input = (PausePlayResult*)lParam;
 		if (!input->hasChangedVolume && mediaCommand->button == NULL)
 		{
 			KEYBDINPUT kb = {};
@@ -213,17 +218,15 @@ BOOL WINAPI pausePlayMediaEnumProc(HWND hwnd, LPARAM lParam)
 	return true;
 }
 
-bool pausePlayMedia()
+PausePlayResult pausePlayMedia()
 {
-	MediaEnumInput input;
-	input.hasChangedVolume = false;
-
+	PausePlayResult result{};
 	HWND activeHwnd = GetForegroundWindow();
 
-	EnumWindows(pausePlayMediaEnumProc, (LPARAM)&input);
+	EnumWindows(pausePlayMediaEnumProc, (LPARAM)&result);
 	SetForegroundWindow(activeHwnd);
 
-	return input.hasChangedVolume;
+	return result;
 }
 
 void updateSoundOption()
@@ -343,13 +346,13 @@ void loadOptions()
 
 	if (optionsFile)
 	{
-		WCHAR option[256], value[256];
+		WCHAR option[256] = { 0 }, value[256] = { 0 };
 		while (fwscanf_s(optionsFile, L"%[^,],%[^\r\n] ", option, 256, value, 256) == 2)
 		{
 			if (wcsncmp(option, reqFSOptionName, 256) == 0)
 			{
-				unsigned char fullscreen;
-				swscanf_s(value, L"%hhu", &fullscreen);
+				unsigned short fullscreen;
+				swscanf_s(value, L"%hu", &fullscreen);
 				reqFullscreen = fullscreen;
 			}
 			else if (wcsncmp(option, soundOptionName, 256) == 0)
@@ -390,10 +393,12 @@ LRESULT CALLBACK keyHookProc(int nCode, WPARAM wParam, LPARAM lParam)
 						break;
 					}
 
-					if ((!reqFullscreen || isActiveWindowFullscreen()) &&
-						pausePlayMedia())
+					if ((!reqFullscreen || isActiveWindowFullscreen()))
 					{
-						changeFGWindowVolume();
+						PausePlayResult result = pausePlayMedia();
+						if (result.hasChangedVolume) {
+							changeFGWindowVolume();
+						}
 					}
 					return TRUE;
 				case VK_MEDIA_NEXT_TRACK:
@@ -407,10 +412,12 @@ LRESULT CALLBACK keyHookProc(int nCode, WPARAM wParam, LPARAM lParam)
 					if (!xboxButtonDown)
 					{
 						xboxButtonDown = true;
-						if ((!reqFullscreen || isActiveWindowFullscreen()) &&
-							pausePlayMedia())
+						if ((!reqFullscreen || isActiveWindowFullscreen()))
 						{
-							changeFGWindowVolume();
+							PausePlayResult result = pausePlayMedia();
+							if (result.hasChangedVolume) {
+								changeFGWindowVolume();
+							}
 						}
 					}
 					return TRUE;
