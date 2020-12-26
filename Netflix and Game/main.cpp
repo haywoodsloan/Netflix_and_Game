@@ -43,7 +43,7 @@ struct PausePlayResult
 };
 
 const MediaCommand mediaCommands[] = {
-	{MatchType::title, "YouTube", NULL}, {MatchType::title, "Netflix", NULL},
+	{MatchType::title, "YouTube", VK_SPACE}, {MatchType::title, "Netflix", VK_SPACE},
 	{MatchType::title, "Hulu", VK_SPACE},{MatchType::exe, "Spotify", NULL},
 	{MatchType::title, "Skype", NULL}, {MatchType::title, "VLC media player", VK_SPACE},
 	{MatchType::title, "Plex", VK_SPACE}, {MatchType::title, "CW iFrame", VK_SPACE},
@@ -202,15 +202,10 @@ BOOL WINAPI pausePlayMediaEnumProc(HWND hwnd, LPARAM lParam)
 		}
 		else if (mediaCommand->button != NULL)
 		{
-			LONG windowStyles = GetWindowLong(hwnd, GWL_EXSTYLE);
-			LONG windowStyleNoActive = windowStyles | WS_EX_NOACTIVATE;
-
-			SetWindowLong(hwnd, GWL_EXSTYLE, windowStyleNoActive);
 			SendMessage(hwnd, WM_ACTIVATE, WA_ACTIVE, 0);
 			SendMessage(hwnd, WM_KEYDOWN, mediaCommand->button, 0);
 			SendMessage(hwnd, WM_KEYUP, mediaCommand->button, 0);
 			SendMessage(hwnd, WM_ACTIVATE, WA_INACTIVE, 0);
-			SetWindowLong(hwnd, GWL_EXSTYLE, windowStyles);
 		}
 
 		input->hasChangedVolume = true;
