@@ -33,7 +33,7 @@ enum class MatchType { title, exe };
 struct MediaCommand
 {
 	MatchType matchType;
-	char* matchStr;
+	const char* matchStr;
 	UINT button;
 };
 
@@ -47,7 +47,7 @@ const MediaCommand mediaCommands[] = {
 	{MatchType::title, "Hulu", VK_SPACE},{MatchType::exe, "Spotify", NULL},
 	{MatchType::title, "Skype", NULL}, {MatchType::title, "VLC media player", VK_SPACE},
 	{MatchType::title, "Plex", VK_SPACE}, {MatchType::title, "CW iFrame", VK_SPACE},
-	{MatchType::title, "Amazon.com", VK_SPACE}
+	{MatchType::title, "Amazon.com", VK_SPACE}, {MatchType::title, "Funimation", NULL}
 };
 
 const MediaCommand* getMediaCommand(HWND hwnd)
@@ -66,8 +66,8 @@ const MediaCommand* getMediaCommand(HWND hwnd)
 	UINT count = sizeof(mediaCommands) / sizeof(mediaCommands[0]);
 	for (UINT i = 0; i < count; i++)
 	{
-		if ((mediaCommands[i].matchType == MatchType::title && strstr(titleBuff, mediaCommands[i].matchStr) > 0) ||
-			(mediaCommands[i].matchType == MatchType::exe && strstr(exeBuff, mediaCommands[i].matchStr) > 0))
+		if ((mediaCommands[i].matchType == MatchType::title && strstr(titleBuff, mediaCommands[i].matchStr) != nullptr) ||
+			(mediaCommands[i].matchType == MatchType::exe && strstr(exeBuff, mediaCommands[i].matchStr) != nullptr))
 		{
 			delete[] titleBuff;
 			return &mediaCommands[i];
