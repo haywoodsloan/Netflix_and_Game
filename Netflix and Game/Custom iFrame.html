@@ -1,54 +1,101 @@
 <!DOCTYPE html>
 <html>
-	<head>
-	  <title>Select Media</title>
-        <script>
+  <head>
+    <title>Select Media</title>
+    <style>
+      body,
+      html {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
 
-            var siteDict = {
-                plex: ["Plex iFrame", "http://127.0.0.1:32400"],
-                cw: ["CW iFrame", "http://www.cwtv.com/"]
-            };
+        height: 100%;
+        overflow: hidden;
+        margin: 0;
+        padding: 0;
 
-            function buttonSelect() 
-            {
-                var select = document.getElementById('selection');
-                var selection = select.options[select.selectedIndex].value;
+        background-color: rgb(53, 54, 58);
+      }
 
-                var frame = document.getElementById('showFrame');
-                frame.src = siteDict[selection][1];
-                document.title = siteDict[selection][0];
-                frame.style.visibility = "visible";
+      #controls {
+        display: flex;
+        justify-content: center;
+      }
 
-                var selector = document.getElementsByClassName('selector');
-                for (var i = 0, len = selector.length; i < len; i++)
-                {
-                    selector[i].style.visibility = "hidden";
-                }
-            }
+      #selection {
+        font-size: 32px;
+        color: darkslategray;
 
-        </script>
-	</head>
+        border: solid darkgrey;
+        border-radius: 9999px;
 
-	<body>
-        <div style="vertical-align:middle;">         
-            <select id="selection" class="selector" style="height:auto; width:auto;
-                margin-right:3px; margin-top:auto; margin-bottom:auto;">
-                    <option value="plex">Plex</option>
-                    <option value="cw">CW</option>
-            </select>
+        margin-right: 15px;
+        padding-left: 8px;
+        padding-right: 2px;
+      }
 
-            <button class="selector" style="height:auto; width:auto; margin:auto;" onclick="buttonSelect()">Go!</button>
-        </div>
+      #go {
+        cursor: pointer;
+        font-size: 32px;
 
-		<iframe id="showFrame" src="about:blank"
-			allowfullscreen="allowfullscreen"
-			mozallowfullscreen="mozallowfullscreen" 
-			msallowfullscreen="msallowfullscreen" 
-			oallowfullscreen="oallowfullscreen" 
-            webkitallowfullscreen="webkitallowfullscreen"
-			style="position:fixed; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%; 
-                border:none; margin:0; padding:0; overflow:hidden; z-index:999999; visibility:hidden;" >
-				    Your browser doesn't support iframes
-		</iframe>
-	</body>
+        border: solid white;
+        border-radius: 9999px;
+
+        padding-left: 10px;
+        padding-right: 10px;
+
+        color: white;
+        background-color: forestgreen;
+      }
+
+      #frame {
+        display: none;
+        height: 100%;
+        border: none;
+      }
+    </style>
+    <script>
+      const siteDict = {
+        plex: ['Plex iFrame', 'http://127.0.0.1:32400'],
+        cw: ['CW iFrame', 'http://www.cwtv.com/'],
+      };
+    </script>
+  </head>
+  <body>
+    <div id="controls">
+      <select id="selection">
+        <option value="plex">Plex</option>
+        <option value="cw">CW</option>
+      </select>
+      <button id="go" onclick="buttonSelect()">Go!</button>
+    </div>
+
+    <iframe
+      id="frame"
+      src="about:blank"
+      allowfullscreen="allowfullscreen"
+      mozallowfullscreen="mozallowfullscreen"
+      msallowfullscreen="msallowfullscreen"
+      oallowfullscreen="oallowfullscreen"
+      webkitallowfullscreen="webkitallowfullscreen"
+    >
+      Your browser doesn't support iframes
+    </iframe>
+
+    <script>
+      function buttonSelect() {
+        const select = document.getElementById('selection');
+        const selection = select.options[select.selectedIndex].value;
+        const [title, src] = siteDict[selection];
+
+        var frame = document.getElementById('frame');
+        frame.style.display = 'unset';
+        document.title = title;
+        frame.src = src;
+
+        const controls = document.getElementById('controls');
+        controls.style.display = 'none';
+      }
+    </script>
+  </body>
 </html>
