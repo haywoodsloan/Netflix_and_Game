@@ -47,7 +47,8 @@ const MediaCommand mediaCommands[] = {
 	{MatchType::title, "Hulu", VK_SPACE},{MatchType::exe, "Spotify", NULL},
 	{MatchType::title, "Skype", NULL}, {MatchType::title, "VLC media player", VK_SPACE},
 	{MatchType::title, "Plex", VK_SPACE}, {MatchType::title, "CW iFrame", VK_SPACE},
-	{MatchType::title, "Amazon.com", VK_SPACE}, {MatchType::title, "Funimation", NULL}
+	{MatchType::title, "Amazon.com", VK_SPACE}, {MatchType::title, "Funimation", NULL},
+	{MatchType::title, "Crunchyroll", VK_SPACE}
 };
 
 const MediaCommand* getMediaCommand(HWND hwnd)
