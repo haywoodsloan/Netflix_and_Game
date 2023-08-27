@@ -39,7 +39,7 @@ struct MediaCommand
 
 struct PausePlayResult
 {
-	bool hasChangedVolume;
+	bool hasFoundMedia;
 };
 
 const MediaCommand mediaCommands[] = {
@@ -177,6 +177,18 @@ bool isActiveWindowFullscreen()
 		activeHwndRect.right >= activeMonitorInfo.rcMonitor.right - 1);
 }
 
+void sendPausePlayPress() {
+	KEYBDINPUT kb = {};
+	kb.wVk = VK_MEDIA_PLAY_PAUSE;
+	kb.dwExtraInfo = simulatedInput;
+
+	INPUT input = {};
+	input.type = INPUT_KEYBOARD;
+	input.ki = kb;
+
+	SendInput(1, &input, sizeof(INPUT));
+}
+
 BOOL WINAPI pausePlayMediaEnumProc(HWND hwnd, LPARAM lParam)
 {
 	if (hwnd == msgWindow ||
@@ -189,17 +201,9 @@ BOOL WINAPI pausePlayMediaEnumProc(HWND hwnd, LPARAM lParam)
 	if (mediaCommand)
 	{
 		PausePlayResult* input = (PausePlayResult*)lParam;
-		if (!input->hasChangedVolume && mediaCommand->button == NULL)
+		if (!input->hasFoundMedia && mediaCommand->button == NULL)
 		{
-			KEYBDINPUT kb = {};
-			kb.wVk = VK_MEDIA_PLAY_PAUSE;
-			kb.dwExtraInfo = simulatedInput;
-
-			INPUT input = {};
-			input.type = INPUT_KEYBOARD;
-			input.ki = kb;
-
-			SendInput(1, &input, sizeof(INPUT));
+			sendPausePlayPress();
 		}
 		else if (mediaCommand->button != NULL)
 		{
@@ -209,7 +213,7 @@ BOOL WINAPI pausePlayMediaEnumProc(HWND hwnd, LPARAM lParam)
 			SendMessage(hwnd, WM_ACTIVATE, WA_INACTIVE, 0);
 		}
 
-		input->hasChangedVolume = true;
+		input->hasFoundMedia = true;
 	}
 
 	return true;
@@ -393,7 +397,7 @@ LRESULT CALLBACK keyHookProc(int nCode, WPARAM wParam, LPARAM lParam)
 					if (!reqFullscreen || isActiveWindowFullscreen())
 					{
 						PausePlayResult result = pausePlayMedia();
-						if (result.hasChangedVolume) {
+						if (result.hasFoundMedia) {
 							changeFGWindowVolume();
 						}
 					}
@@ -402,7 +406,10 @@ LRESULT CALLBACK keyHookProc(int nCode, WPARAM wParam, LPARAM lParam)
 					if (!nextTrackKeyDown)
 					{
 						nextTrackKeyDown = true;
-						pausePlayMedia();
+						PausePlayResult result = pausePlayMedia();
+						if (!result.hasFoundMedia) {
+							sendPausePlayPress();
+						}
 					}
 					return TRUE;
 				case XBOX_BUTTON:
@@ -412,7 +419,7 @@ LRESULT CALLBACK keyHookProc(int nCode, WPARAM wParam, LPARAM lParam)
 						if (!reqFullscreen || isActiveWindowFullscreen())
 						{
 							PausePlayResult result = pausePlayMedia();
-							if (result.hasChangedVolume) {
+							if (result.hasFoundMedia) {
 								changeFGWindowVolume();
 							}
 						}
