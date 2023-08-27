@@ -118,8 +118,6 @@ media_ptr<IAudioSessionControl*> getMediaSession(HWND hwnd) {
 
 void changeFGWindowVolume()
 {
-	if (soundOption == dncItemID) return;
-
 	HWND activeHWND = GetForegroundWindow();
 	if (getMediaCommand(activeHWND)) return;
 
@@ -139,6 +137,13 @@ void changeFGWindowVolume()
 		{
 			audioVolume->SetMute(!muted, 0);
 
+			if (volumeLevel != 1.0f)
+			{
+				audioVolume->SetMasterVolume(1.0f, 0);
+			}
+		}
+		else if (soundOption == dncItemID)
+		{
 			if (volumeLevel != 1.0f)
 			{
 				audioVolume->SetMasterVolume(1.0f, 0);
@@ -226,6 +231,7 @@ PausePlayResult pausePlayMedia()
 
 	EnumWindows(pausePlayMediaEnumProc, (LPARAM)&result);
 	SetForegroundWindow(activeHwnd);
+	SetActiveWindow(activeHwnd);
 
 	return result;
 }
@@ -397,8 +403,10 @@ LRESULT CALLBACK keyHookProc(int nCode, WPARAM wParam, LPARAM lParam)
 					if (!reqFullscreen || isActiveWindowFullscreen())
 					{
 						PausePlayResult result = pausePlayMedia();
-						if (result.hasFoundMedia) {
-							changeFGWindowVolume();
+						changeFGWindowVolume();
+						if (!result.hasFoundMedia)
+						{
+							sendPausePlayPress();
 						}
 					}
 					return TRUE;
@@ -407,7 +415,8 @@ LRESULT CALLBACK keyHookProc(int nCode, WPARAM wParam, LPARAM lParam)
 					{
 						nextTrackKeyDown = true;
 						PausePlayResult result = pausePlayMedia();
-						if (!result.hasFoundMedia) {
+						if (!result.hasFoundMedia)
+						{
 							sendPausePlayPress();
 						}
 					}
@@ -419,7 +428,8 @@ LRESULT CALLBACK keyHookProc(int nCode, WPARAM wParam, LPARAM lParam)
 						if (!reqFullscreen || isActiveWindowFullscreen())
 						{
 							PausePlayResult result = pausePlayMedia();
-							if (result.hasFoundMedia) {
+							if (result.hasFoundMedia)
+							{
 								changeFGWindowVolume();
 							}
 						}
