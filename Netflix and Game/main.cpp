@@ -403,10 +403,8 @@ LRESULT CALLBACK keyHookProc(int nCode, WPARAM wParam, LPARAM lParam)
 					if (!reqFullscreen || isActiveWindowFullscreen())
 					{
 						PausePlayResult result = pausePlayMedia();
-						changeFGWindowVolume();
-						if (!result.hasFoundMedia)
-						{
-							sendPausePlayPress();
+						if (result.hasFoundMedia) {
+							changeFGWindowVolume();
 						}
 					}
 					return TRUE;
@@ -414,11 +412,7 @@ LRESULT CALLBACK keyHookProc(int nCode, WPARAM wParam, LPARAM lParam)
 					if (!nextTrackKeyDown)
 					{
 						nextTrackKeyDown = true;
-						PausePlayResult result = pausePlayMedia();
-						if (!result.hasFoundMedia)
-						{
-							sendPausePlayPress();
-						}
+						pausePlayMedia();
 					}
 					return TRUE;
 				case XBOX_BUTTON:
