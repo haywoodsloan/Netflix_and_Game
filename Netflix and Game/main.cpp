@@ -5,6 +5,7 @@
 #include <ShlObj.h>
 #include <stdio.h>
 #include <psapi.h>
+#include <Shlwapi.h>
 #include "resource.h"
 
 #include "media_ptr.h"
@@ -67,8 +68,8 @@ const MediaCommand* getMediaCommand(HWND hwnd)
 	UINT count = sizeof(mediaCommands) / sizeof(mediaCommands[0]);
 	for (UINT i = 0; i < count; i++)
 	{
-		if ((mediaCommands[i].matchType == MatchType::title && strstr(titleBuff, mediaCommands[i].matchStr) != nullptr) ||
-			(mediaCommands[i].matchType == MatchType::exe && strstr(exeBuff, mediaCommands[i].matchStr) != nullptr))
+		if ((mediaCommands[i].matchType == MatchType::title && StrStrI(titleBuff, mediaCommands[i].matchStr) != NULL) ||
+			(mediaCommands[i].matchType == MatchType::exe && StrStrI(exeBuff, mediaCommands[i].matchStr) != NULL))
 		{
 			delete[] titleBuff;
 			return &mediaCommands[i];
