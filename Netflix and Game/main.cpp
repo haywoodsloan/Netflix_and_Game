@@ -231,9 +231,9 @@ PausePlayResult pausePlayMedia()
 	HWND activeHwnd = GetForegroundWindow();
 
 	EnumWindows(pausePlayMediaEnumProc, (LPARAM)&result);
-	SetForegroundWindow(activeHwnd);
 	SetActiveWindow(activeHwnd);
-
+	SetForegroundWindow(activeHwnd);
+	        
 	return result;
 }
 
